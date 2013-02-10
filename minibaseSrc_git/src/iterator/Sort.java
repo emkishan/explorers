@@ -427,7 +427,9 @@ public class Sort extends Iterator implements GlobalConst
       new_tuple = new Tuple(tuple_size); // need tuple.java??
 
       try {
+    //System.out.println("Columns : " + n_cols + "\t _in " + _in + "\t str_lens" );	  
 	new_tuple.setHdr(n_cols, _in, str_lens);
+	//System.out.println("New Tuple size : " + new_tuple.size());
       }
       catch (Exception e) {
 	throw new SortException(e, "Sort.java: setHdr() failed");
@@ -439,6 +441,8 @@ public class Sort extends Iterator implements GlobalConst
 	System.out.print(" fill in from run " + cur_node.run_num);
 	new_tuple.print(_in);
 	*/
+    //System.out.println("Current Node in deletemin() " + cur_node.tuple.size());
+    //System.out.println("New Tuple size : " + new_tuple.size());
 	cur_node.tuple = new_tuple;  // no copy needed -- I think Bingjie 4/22/98
 	try {
 	  Q.enq(cur_node);
@@ -690,8 +694,8 @@ public class Sort extends Iterator implements GlobalConst
       // no more tuples availble
       return null;
     }
-    
     output_tuple = delete_min();
+    //System.out.println("Output tuple size : " + output_tuple.size());
     if (output_tuple != null){
       op_buf.tupleCopy(output_tuple);
       return op_buf; 
