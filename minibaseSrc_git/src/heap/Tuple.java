@@ -71,15 +71,32 @@ public class Tuple implements GlobalConst{
     * @param length the length of the tuple
     */
 
-   public Tuple(byte [] atuple, int offset, int length)
-   {
-      data = atuple;
-      tuple_offset = offset;
-      tuple_length = length;
-    //  fldCnt = getShortValue(offset, data);
-      /* Added by Kishan - Defaulting score to 1.0*/
-      score = 1.0f;
-   }
+  public Tuple(byte [] atuple, int offset, int length)
+  {
+	  try{
+//		  byte[] tempArray = new byte[length+4];
+//		  Convert.setFloValue(1.0f, length, tempArray);
+//		  System.out.println("Before : ");
+//		  for(int i=0;i<)
+//		  System.arraycopy(atuple, 0, tempArray, tuple_offset, length);
+//		  System.out.println("TempArray : " + tempArray);
+//		  System.out.println("");
+//		  data = tempArray;
+//		  tuple_offset = offset;
+//		  tuple_length = length;
+//		  System.out.println("tuple_length: "+length);
+//		  System.out.println("data: "+data.length);
+//		  //  fldCnt = getShortValue(offset, data);
+//		  /* Added by Kishan - Defaulting score to 1.0*/
+//		  score = 1.0f;
+		  data = atuple;
+	      tuple_offset = offset;
+	      tuple_length = length;
+	  }
+	  catch(Exception e){
+		  System.out.println("Exception in creating tuple ");
+	  }
+  }
    
    /** Constructor(used as tuple copy)
     * @param fromTuple   a byte array which contains the tuple
@@ -118,6 +135,9 @@ public class Tuple implements GlobalConst{
    public void tupleCopy(Tuple fromTuple)
    {
        byte [] temparray = fromTuple.getTupleByteArray();
+  /*     System.out.println("Tuple length: "+ tuple_length +" offset: "+tuple_offset);
+       System.out.println(" tempArray length: "+temparray.length);
+       System.out.println("data Array length: "+data.length);*/
        System.arraycopy(temparray, 0, data, tuple_offset, tuple_length);   
 //       fldCnt = fromTuple.noOfFlds(); 
 //       fldOffset = fromTuple.copyFldOffset(); 
@@ -164,7 +184,8 @@ public class Tuple implements GlobalConst{
   */
   public short size()
    {
-      return ((short) (fldOffset[fldCnt] - tuple_offset));
+	  System.out.println("Field Count : " + fldCnt);
+      return ((short) (fldOffset[fldCnt+1] - tuple_offset));
    }
  
    /** get the offset of a tuple
@@ -390,18 +411,18 @@ public class Tuple implements GlobalConst{
 public void setHdr (short numFlds,  AttrType types[], short strSizes[])
  throws IOException, InvalidTypeException, InvalidTupleSizeException		
 {
-  if((numFlds +2)*2 > max_size)
+  if((numFlds +3)*2 > max_size)
     throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
   
   fldCnt = numFlds;
-  Convert.setShortValue(numFlds, tuple_offset, data);
+  Convert.setShortValue((short)(numFlds+1), tuple_offset, data);
   /* Added by Kishan - numFlds + 1 was present*/
   fldOffset = new short[numFlds+2];
   int pos = tuple_offset+2;  // start position for fldOffset[]
   
   //sizeof short =2  +2: array siaze = numFlds +1 (0 - numFilds) and
   //another 1 for fldCnt
-  fldOffset[0] = (short) ((numFlds +2) * 2 + tuple_offset);   
+  fldOffset[0] = (short) ((numFlds +3) * 2 + tuple_offset);   
    
   Convert.setShortValue(fldOffset[0], pos, data);
   pos +=2;
@@ -458,12 +479,12 @@ public void setHdr (short numFlds,  AttrType types[], short strSizes[])
   
   /*Added by Kishan - Begin - For Adding score*/
     incr =4;
-    fldOffset[numFlds+1] = (short) (fldOffset[i] + incr);
-    Convert.setShortValue(fldOffset[numFlds], pos, data);
+    fldOffset[numFlds+1] = (short) (fldOffset[numFlds] + incr);
+    Convert.setShortValue(fldOffset[numFlds+1], pos, data);
  /*Added by Kishan - End*/
   
   tuple_length = fldOffset[numFlds+1] - tuple_offset;
-
+System.out.println("Tuple Length is " + tuple_length);
   if(tuple_length > max_size)
    throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
 }
