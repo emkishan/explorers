@@ -10,7 +10,7 @@ import java.lang.*;
 import java.io.*;
 
 /**
- *Eleminate the duplicate tuples from the input relation
+ *Eliminate the duplicate tuples from the input relation
  */
 public class DuplElim extends Iterator
 {
@@ -24,6 +24,8 @@ public class DuplElim extends Iterator
   private AttrType  sortFldType;
   private int       sortFldLen;
   private Tuple    Jtuple;
+  private int tupleCount = 0;
+  private float meanScore = 0;
   
   private Tuple TempTuple1, TempTuple2;
   
@@ -135,6 +137,8 @@ public class DuplElim extends Iterator
       
       if (done)
         return null;
+      System.out.println("Number of fields: "+TempTuple1.noOfFlds());
+     // System.out.println("Field Info: "+ TempTuple1.);
       Jtuple.tupleCopy(TempTuple1);
      
       do {
@@ -142,12 +146,17 @@ public class DuplElim extends Iterator
 	  done = true;                    // next call returns DONE;
 	  return null;
 	} 
+	System.out.println(t.getScore());
+	tupleCount++;
+	meanScore = meanScore+t.getScore();
 	TempTuple2.tupleCopy(t);
       } while (TupleUtils.Equal(TempTuple1, TempTuple2, _in, in_len));
       
       // Now copy the the TempTuple2 (new o/p tuple) into TempTuple1.
+      meanScore = meanScore/tupleCount;
       TempTuple1.tupleCopy(TempTuple2);
       Jtuple.tupleCopy(TempTuple2);
+      Jtuple.setScore(meanScore);
       return Jtuple ;
     }
  
