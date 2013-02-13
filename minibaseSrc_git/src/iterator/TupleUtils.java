@@ -131,9 +131,23 @@ public class TupleUtils
     {
       int i;
       
+      /*     
       for (i = 1; i <= len; i++)
 	if (CompareTupleWithTuple(types[i-1], t1, i, t2, i) != 0)
 	  return false;
+      return true;*/
+      
+      /*
+       * Modified by Neethu
+       * Assume the last column to be score
+       * Execute the column comparison by not considering the last column i.e i ranging from column 1 to len-1
+       */
+      if(len==1) return false;
+      else{
+      for (i = 1; i <= len-1; i++)
+    		if (CompareTupleWithTuple(types[i-1], t1, i, t2, i) != 0)
+    		  return false;
+      }
       return true;
     }
   
