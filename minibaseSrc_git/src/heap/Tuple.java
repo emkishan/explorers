@@ -109,8 +109,6 @@ public class Tuple implements GlobalConst{
        tuple_offset = 0;
        fldCnt = fromTuple.noOfFlds(); 
        fldOffset = fromTuple.copyFldOffset();
-       /* Added by Kishan - Defaulting score to 1.0*/
-       score = 1.0f;
    }
 
    /**  
@@ -124,8 +122,6 @@ public class Tuple implements GlobalConst{
        data = new byte[size];
        tuple_offset = 0;
        tuple_length = size;
-       /* Added by Kishan - Defaulting score to 1.0*/
-       score = 1.0f;
   }
    
    /** Copy a tuple to the current tuple position
@@ -184,8 +180,9 @@ public class Tuple implements GlobalConst{
   */
   public short size()
    {
-	  System.out.println("Field Count : " + fldCnt);
+	  //System.out.println("Field Count : " + fldCnt);
       return ((short) (fldOffset[fldCnt+1] - tuple_offset));
+      //return ((short) (fldOffset[fldCnt] - tuple_offset));
    }
  
    /** get the offset of a tuple
@@ -201,8 +198,10 @@ public class Tuple implements GlobalConst{
     * get the score of a tuple
     * @return float value of the score
     */
-   public float getScore(){
-	   return score;
+   public float getScore() throws IOException,FieldNumberOutOfBoundException{
+	   int fieldCount = fldCnt;
+	   float val = Convert.getFloValue(fldOffset[fieldCount -1], data);
+	   return val;
    }
    
    /* Added by Kishan */
@@ -210,8 +209,9 @@ public class Tuple implements GlobalConst{
     * set the score of the tuple
     * @param f float value to be set to the tuple
     */
-   public void setScore(float f){
-	   score = f;
+   public void setScore(float f) throws IOException,FieldNumberOutOfBoundException{
+	   int fieldCount = fldCnt;
+	   Convert.setFloValue (f, fldOffset[fieldCount -1], data); 
    }
    
    /** Copy the tuple byte array out
@@ -408,21 +408,21 @@ public class Tuple implements GlobalConst{
     *
     */
 
-public void setHdr (short numFlds,  AttrType types[], short strSizes[])
+public void setHdr2 (short numFlds,  AttrType types[], short strSizes[])
  throws IOException, InvalidTypeException, InvalidTupleSizeException		
 {
-  if((numFlds +3)*2 > max_size)
+  if((numFlds +2)*2 > max_size)
     throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
   
   fldCnt = numFlds;
-  Convert.setShortValue((short)(numFlds+1), tuple_offset, data);
+  Convert.setShortValue((short)(numFlds), tuple_offset, data);
   /* Added by Kishan - numFlds + 1 was present*/
   fldOffset = new short[numFlds+2];
   int pos = tuple_offset+2;  // start position for fldOffset[]
   
   //sizeof short =2  +2: array siaze = numFlds +1 (0 - numFilds) and
   //another 1 for fldCnt
-  fldOffset[0] = (short) ((numFlds +3) * 2 + tuple_offset);   
+  fldOffset[0] = (short) ((numFlds +2) * 2 + tuple_offset);   
    
   Convert.setShortValue(fldOffset[0], pos, data);
   pos +=2;
@@ -474,21 +474,99 @@ public void setHdr (short numFlds,  AttrType types[], short strSizes[])
 
   fldOffset[numFlds] = (short) (fldOffset[i-1] + incr);
   Convert.setShortValue(fldOffset[numFlds], pos, data);
-  /* Added by Kishan - positiion should be shifted by 2*/
-  pos+=2;
-  
-  /*Added by Kishan - Begin - For Adding score*/
-    incr =4;
-    fldOffset[numFlds+1] = (short) (fldOffset[numFlds] + incr);
-    Convert.setShortValue(fldOffset[numFlds+1], pos, data);
- /*Added by Kishan - End*/
   
   tuple_length = fldOffset[numFlds+1] - tuple_offset;
-System.out.println("Tuple Length is " + tuple_length);
+//System.out.println("Tuple Length is " + tuple_length);
   if(tuple_length > max_size)
    throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
 }
-     
+ 
+public void setHdr (short numFlds,  AttrType types[], short strSizes[])
+		 throws IOException, InvalidTypeException, InvalidTupleSizeException		
+		{
+		  if((numFlds +3)*2 > max_size)
+		    throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
+		  
+		  fldCnt = numFlds;
+		  Convert.setShortValue((short)(numFlds+1), tuple_offset, data);
+		  /* Added by Kishan - numFlds + 1 was present*/
+		  fldOffset = new short[numFlds+2];
+		  int pos = tuple_offset+2;  // start position for fldOffset[]
+		  
+		  //sizeof short =2  +2: array siaze = numFlds +1 (0 - numFilds) and
+		  //another 1 for fldCnt
+		  fldOffset[0] = (short) ((numFlds +3) * 2 + tuple_offset);   
+		   
+		  Convert.setShortValue(fldOffset[0], pos, data);
+		  pos +=2;
+		  short strCount =0;
+		  short incr;
+		  int i;
+
+		  for (i=1; i<numFlds; i++)
+		  {
+		    switch(types[i-1].attrType) {
+		    
+		   case AttrType.attrInteger:
+		     incr = 4;
+		     break;
+
+		   case AttrType.attrReal:
+		     incr =4;
+		     break;
+
+		   case AttrType.attrString:
+		     incr = (short) (strSizes[strCount] +2);  //strlen in bytes = strlen +2
+		     strCount++;
+		     break;       
+		 
+		   default:
+		    throw new InvalidTypeException (null, "TUPLE: TUPLE_TYPE_ERROR");
+		   }
+		  fldOffset[i]  = (short) (fldOffset[i-1] + incr);
+		  Convert.setShortValue(fldOffset[i], pos, data);
+		  pos +=2;
+		}
+		 switch(types[numFlds -1].attrType) {
+
+		   case AttrType.attrInteger:
+		     incr = 4;
+		     break;
+
+		   case AttrType.attrReal:
+		     incr =4;
+		     break;
+
+		   case AttrType.attrString:
+		     incr =(short) ( strSizes[strCount] +2);  //strlen in bytes = strlen +2
+		     break;
+
+		   default:
+		    throw new InvalidTypeException (null, "TUPLE: TUPLE_TYPE_ERROR");
+		   }
+
+		  fldOffset[numFlds] = (short) (fldOffset[i-1] + incr);
+		  Convert.setShortValue(fldOffset[numFlds], pos, data);
+		  /* Added by Kishan - positiion should be shifted by 2*/
+		  pos+=2;
+		  
+		  /*Added by Kishan - Begin - For Adding score*/
+		    incr =4;
+		    fldOffset[numFlds+1] = (short) (fldOffset[numFlds] + incr);
+		    Convert.setShortValue(fldOffset[numFlds+1], pos, data);
+		 /*Added by Kishan - End*/
+		  
+		  tuple_length = fldOffset[numFlds+1] - tuple_offset;
+		//System.out.println("Tuple Length is " + tuple_length);
+		  try{
+			  setScore(1.0f);
+		  }
+		  catch(Exception e){
+			  System.out.println("Unable to set score");
+		  }
+		  if(tuple_length > max_size)
+		   throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
+		}
   
   /**
    * Returns number of fields in this tuple
