@@ -8,7 +8,7 @@ import java.io.*;
  * Jtuple already has its setHdr called to setup its vital stas.
  */
 
-public class Projection
+public class TopProjection
 {
   /**
    *Tuple t1 and Tuple t2 will be joined, and the result 
@@ -25,8 +25,8 @@ public class Projection
    *@exception FieldNumberOutOfBoundException field number exceeds limit
    *@exception IOException some I/O fault 
    */
-  public static void Join( Tuple  t1, AttrType type1[],
-                           Tuple  t2, AttrType type2[],
+  public static void Join( Tuple  t1, AttrType type1[], int first_length,
+                           Tuple  t2, AttrType type2[], int second_length,
         	           Tuple Jtuple, FldSpec  perm_mat[], 
                            int nOutFlds
 			   )
@@ -35,9 +35,18 @@ public class Projection
 	   IOException
     {
       
-     System.out.println("Number of Output fields in Jtuple" + nOutFlds); 
+      
       for (int i = 0; i < nOutFlds; i++)
 	{
+      if(i==first_length-1){
+    	  continue;
+      }
+      else if(i==second_length-1){
+    	  float firstScore = t1.getFloFld(first_length-1);
+    	  float secondScore = t2.getFloFld(second_length-1);
+    	  Jtuple.setFloFld(nOutFlds-1, (firstScore+secondScore)/2);
+      }
+      else{
 	  switch (perm_mat[i].relation.key)
 	    {
 	    case RelSpec.outer:        // Field of outer (t1)
@@ -78,88 +87,13 @@ public class Projection
 		}
 	      break;
 	    }
+      }
 	}
       return;
     }
   
-  /**
-   *Tuple t1 and Tuple t2 will be joined, and the result 
-   *will be stored in Tuple Jtuple,before calling this mehtod.
-   *we know that this two tuple can join in the common field
-   *@param t1 The Tuple will be joined with t2
-   *@param type1[] The array used to store the each attribute type
-   *@param t2 The Tuple will be joined with t1
-   *@param type2[] The array used to store the each attribute type
-   *@param Jtuple the returned Tuple
-   *@param perm_mat[] shows what input fields go where in the output tuple
-   *@param nOutFlds number of outer relation field 
-   *@exception UnknowAttrType attrbute type does't match
-   *@exception FieldNumberOutOfBoundException field number exceeds limit
-   *@exception IOException some I/O fault 
-   */
-  public static void TopJoin( Tuple  t1, AttrType type1[],int first_length,
-                           Tuple  t2, AttrType type2[],int second_length,
-        	           Tuple Jtuple, FldSpec  perm_mat[], 
-                           int nOutFlds
-			   )
-    throws UnknowAttrType,
-	   FieldNumberOutOfBoundException,
-	   IOException
-    {
-    
-     System.out.println("Number of Output fields in Jtuple" + nOutFlds); 
-     System.out.println("First Tuple : " + t1.getStrFld(1));
-     System.out.println("Second Tuple : " + t2.getStrFld(3));
-      for (int i = 0; i < nOutFlds; i++)
-	{
-    	  
-	  switch (perm_mat[i].relation.key)
-	    {
-	    case RelSpec.outer:        // Field of outer (t1)
-	      switch (type1[perm_mat[i].offset-1].attrType)
-		{
-		case AttrType.attrInteger:
-		  Jtuple.setIntFld(i+1, t1.getIntFld(perm_mat[i].offset));
-		  break;
-		case AttrType.attrReal:
-		  Jtuple.setFloFld(i+1, t1.getFloFld(perm_mat[i].offset));
-		  break;
-		case AttrType.attrString:
-		  Jtuple.setStrFld(i+1, t1.getStrFld(perm_mat[i].offset));
-		  break;
-		default:
-		  
-		  throw new UnknowAttrType("Don't know how to handle attrSymbol, attrNull");
-		  
-		}
-	      break;
-	      
-	    case RelSpec.innerRel:        // Field of inner (t2)
-	      switch (type2[perm_mat[i].offset-1].attrType)
-		{
-		case AttrType.attrInteger:
-		  Jtuple.setIntFld(i+1, t2.getIntFld(perm_mat[i].offset));
-		  break;
-		case AttrType.attrReal:
-		  Jtuple.setFloFld(i+1, t2.getFloFld(perm_mat[i].offset));
-		  break;
-		case AttrType.attrString:
-		  Jtuple.setStrFld(i+1, t2.getStrFld(perm_mat[i].offset));
-		  break;
-		default:
-		  
-		  throw new UnknowAttrType("Don't know how to handle attrSymbol, attrNull");  
-		  
-		}
-	      break;
-	    }
-          }
-      System.out.println("Tuple 1 score" + t1.getScore());
-      System.out.println("Tuple 2 score" + t2.getScore());
-      float finalScore = t1.getScore() + t2.getScore();
-      Jtuple.setScore(finalScore/2);
-      return;
-    }
+  
+  
   
   
   /**
@@ -216,7 +150,6 @@ public class Projection
 	     
 	    }
 	}
-      Jtuple.setScore(t1.getScore());
       return;
     }
   

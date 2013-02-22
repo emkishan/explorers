@@ -200,7 +200,7 @@ public class Tuple implements GlobalConst{
     */
    public float getScore() throws IOException,FieldNumberOutOfBoundException{
 	   int fieldCount = fldCnt;
-	   float val = Convert.getFloValue(fldOffset[fieldCount -1], data);
+	   float val = Convert.getFloValue(fldOffset[fieldCount], data);
 	   return val;
    }
    
@@ -211,7 +211,7 @@ public class Tuple implements GlobalConst{
     */
    public void setScore(float f) throws IOException,FieldNumberOutOfBoundException{
 	   int fieldCount = fldCnt;
-	   Convert.setFloValue (f, fldOffset[fieldCount -1], data); 
+	   Convert.setFloValue (f, fldOffset[fieldCount], data); 
    }
    
    /** Copy the tuple byte array out
@@ -558,12 +558,14 @@ public void setHdr (short numFlds,  AttrType types[], short strSizes[])
 		  
 		  tuple_length = fldOffset[numFlds+1] - tuple_offset;
 		//System.out.println("Tuple Length is " + tuple_length);
+		  
 		  try{
-			  setScore(1.0f);
+//			  this.setScore(1.0f);
 		  }
 		  catch(Exception e){
-			  System.out.println("Unable to set score");
+			  System.out.println("Exception occured while setting score");
 		  }
+
 		  if(tuple_length > max_size)
 		   throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
 		}

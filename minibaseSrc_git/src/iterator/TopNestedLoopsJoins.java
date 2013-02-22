@@ -19,7 +19,7 @@ import java.io.*;
  *              if (ri == sj) then add (r, s) to the result.
  */
 
-public class NestedLoopsJoins  extends Iterator 
+public class TopNestedLoopsJoins  extends Iterator 
 {
   private AttrType      _in1[],  _in2[];
   private   int        in1_len, in2_len;
@@ -53,10 +53,11 @@ public class NestedLoopsJoins  extends Iterator
    *@param rightFilter reference to filter applied on right i/p
    *@param proj_list shows what input fields go where in the output tuple
    *@param n_out_flds number of outer relation fileds
+   *@param num number of top elements to be queried
    *@exception IOException some I/O fault
    *@exception NestedLoopException exception from this class
    */
-  public NestedLoopsJoins( AttrType    in1[],    
+  public TopNestedLoopsJoins( AttrType    in1[],    
 			   int     len_in1,           
 			   short   t1_str_sizes[],
 			   AttrType    in2[],         
@@ -68,7 +69,8 @@ public class NestedLoopsJoins  extends Iterator
 			   CondExpr outFilter[],      
 			   CondExpr rightFilter[],    
 			   FldSpec   proj_list[],
-			   int        n_out_flds
+			   int        n_out_flds,
+			   int num
 			   ) throws IOException,NestedLoopException
     {
       
@@ -210,14 +212,17 @@ public class NestedLoopsJoins  extends Iterator
 		      if (PredEval.Eval(OutputFilter, outer_tuple, inner_tuple, _in1, _in2) == true)
 			{
 			  // Apply a projection on the outer and inner tuples.
-		    	  System.out.println("Inner Tuple Score : " + inner_tuple.getScore());
-		    	  System.out.println("Outer Tuple Score : " + outer_tuple.getScore());
+		    	  System.out.println("Outer Tuple Score before Join : " + outer_tuple.getScore());
 			  Projection.TopJoin(outer_tuple, _in1, in1_len,
 					  inner_tuple, _in2, in2_len,
 					  Jtuple, perm_mat, nOutFlds);
-			  	System.out.println("JTuple Score : " + Jtuple.getScore());
-			  	System.out.println("Siiiizeeee : " + Jtuple.getStrFld(1));
+			  for(int i=1;i<nOutFlds;i++){
+				  System.out.print("\t" + Jtuple.getStrFld(i));
+			  }
+			  System.out.print("\t" + Jtuple.getScore());
+			  System.out.println();
 			  return Jtuple;
+			  
 			}
 		    }
 		}
@@ -225,7 +230,6 @@ public class NestedLoopsJoins  extends Iterator
 	      // There has been no match. (otherwise, we would have 
 	      //returned from t//he while loop. Hence, inner is 
 	      //exhausted, => set get_from_outer = TRUE, go to top of loop
-	      
 	      get_from_outer = true; // Loop back to top and get next outer tuple.	      
 	} while (true);
     } 
@@ -250,9 +254,3 @@ public class NestedLoopsJoins  extends Iterator
       }
     }
 }
-
-
-
-
-
-
