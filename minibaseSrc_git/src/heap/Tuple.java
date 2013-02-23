@@ -24,6 +24,11 @@ public class Tuple implements GlobalConst{
    * start position of this tuple in data[]
    */
   private int tuple_offset;
+  
+  //Added for SortMergeJoin -JN
+	public short string_sizes[];
+	public AttrType attr_Types[];
+	public int attrSizes;
 
   /**
    * length of this tuple
@@ -180,9 +185,7 @@ public class Tuple implements GlobalConst{
   */
   public short size()
    {
-	  //System.out.println("Field Count : " + fldCnt);
       return ((short) (fldOffset[fldCnt+1] - tuple_offset));
-      //return ((short) (fldOffset[fldCnt] - tuple_offset));
    }
  
    /** get the offset of a tuple
@@ -484,6 +487,10 @@ public void setHdr2 (short numFlds,  AttrType types[], short strSizes[])
 public void setHdr (short numFlds,  AttrType types[], short strSizes[])
 		 throws IOException, InvalidTypeException, InvalidTupleSizeException		
 		{
+	//Added for SortMergeJoin -JN
+			string_sizes = strSizes;
+			attrSizes = numFlds;
+			attr_Types = types;
 		  if((numFlds +3)*2 > max_size)
 		    throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
 		  
@@ -558,14 +565,12 @@ public void setHdr (short numFlds,  AttrType types[], short strSizes[])
 		  
 		  tuple_length = fldOffset[numFlds+1] - tuple_offset;
 		//System.out.println("Tuple Length is " + tuple_length);
-		  
 		  try{
-//			  this.setScore(1.0f);
+			  //setScore(1.0f);
 		  }
 		  catch(Exception e){
-			  System.out.println("Exception occured while setting score");
+			  System.out.println("Unable to set score");
 		  }
-
 		  if(tuple_length > max_size)
 		   throw new InvalidTupleSizeException (null, "TUPLE: TUPLE_TOOBIG_ERROR");
 		}
@@ -662,6 +667,7 @@ public void setHdr (short numFlds,  AttrType types[], short strSizes[])
    System.out.println("]");
 
  }
+
 
   /**
    * private method
