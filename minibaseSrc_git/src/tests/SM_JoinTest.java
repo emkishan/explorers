@@ -26,12 +26,14 @@ class Sailor {
   public String sname;
   public int    rating;
   public double age;
+  public float score;
   
-  public Sailor (int _sid, String _sname, int _rating,double _age) {
+  public Sailor (int _sid, String _sname, int _rating,double _age, float _score) {
     sid    = _sid;
     sname  = _sname;
     rating = _rating;
     age    = _age;
+    score = _score;
   }
 }
 
@@ -53,11 +55,13 @@ class Reserves {
   public int    sid;
   public int    bid;
   public String date;
+  public float score;
   
-  public Reserves (int _sid, int _bid, String _date) {
+  public Reserves (int _sid, int _bid, String _date, float _score) {
     sid  = _sid;
     bid  = _bid;
     date = _date;
+    score = _score;
   }
 }
 
@@ -77,31 +81,31 @@ class JoinsDriver implements GlobalConst {
     boats    = new Vector();
     reserves = new Vector();
     
-    sailors.addElement(new Sailor(53, "Bob Holloway",       9, 53.6));
-    sailors.addElement(new Sailor(54, "Susan Horowitz",     1, 34.2));
-    sailors.addElement(new Sailor(57, "Yannis Ioannidis",   8, 40.2));
-    sailors.addElement(new Sailor(59, "Deborah Joseph",    10, 39.8));
-    sailors.addElement(new Sailor(61, "Landwebber",         8, 56.7));
-    sailors.addElement(new Sailor(63, "James Larus",        9, 30.3));
-    sailors.addElement(new Sailor(64, "Barton Miller",      5, 43.7));
-    sailors.addElement(new Sailor(67, "David Parter",       1, 99.9));   
-    sailors.addElement(new Sailor(69, "Raghu Ramakrishnan", 9, 37.1));
-    sailors.addElement(new Sailor(71, "Guri Sohi",         10, 42.1));
-    sailors.addElement(new Sailor(73, "Prasoon Tiwari",     8, 39.2));
-    sailors.addElement(new Sailor(39, "Anne Condon",        3, 30.3));
-    sailors.addElement(new Sailor(47, "Charles Fischer",    6, 46.3));
-    sailors.addElement(new Sailor(49, "James Goodman",      4, 50.3));
-    sailors.addElement(new Sailor(50, "Mark Hill",          5, 35.2));
-    sailors.addElement(new Sailor(75, "Mary Vernon",        7, 43.1));
-    sailors.addElement(new Sailor(79, "David Wood",         3, 39.2));
-    sailors.addElement(new Sailor(84, "Mark Smucker",       9, 25.3));
-    sailors.addElement(new Sailor(87, "Martin Reames",     10, 24.1));
-    sailors.addElement(new Sailor(10, "Mike Carey",         9, 40.3));
-    sailors.addElement(new Sailor(21, "David Dewitt",      10, 47.2));
-    sailors.addElement(new Sailor(29, "Tom Reps",           7, 39.1));
-    sailors.addElement(new Sailor(31, "Jeff Naughton",      5, 35.0));
-    sailors.addElement(new Sailor(35, "Miron Livny",        7, 37.6));
-    sailors.addElement(new Sailor(37, "Marv Solomon",      10, 48.9));
+    sailors.addElement(new Sailor(53, "Bob Holloway",       9, 53.6, 0.2f));
+    sailors.addElement(new Sailor(54, "Susan Horowitz",     1, 34.2, 0.45f));
+    sailors.addElement(new Sailor(57, "Yannis Ioannidis",   8, 40.2, 0.54f));
+    sailors.addElement(new Sailor(59, "Deborah Joseph",    10, 39.8, 0.34f));
+    sailors.addElement(new Sailor(61, "Landwebber",         8, 56.7, 0.24f));
+    sailors.addElement(new Sailor(63, "James Larus",        9, 30.3, 0.44f));
+    sailors.addElement(new Sailor(64, "Barton Miller",      5, 43.7, 0.32f));
+    sailors.addElement(new Sailor(67, "David Parter",       1, 99.9, 0.14f));   
+    sailors.addElement(new Sailor(69, "Raghu Ramakrishnan", 9, 37.1, 0.09f));
+    sailors.addElement(new Sailor(71, "Guri Sohi",         10, 42.1, 0.56f));
+    sailors.addElement(new Sailor(73, "Prasoon Tiwari",     8, 39.2, 0.84f));
+    sailors.addElement(new Sailor(39, "Anne Condon",        3, 30.3, 0.84f));
+    sailors.addElement(new Sailor(47, "Charles Fischer",    6, 46.3, 0.64f));
+    sailors.addElement(new Sailor(49, "James Goodman",      4, 50.3, 0.52f));
+    sailors.addElement(new Sailor(50, "Mark Hill",          5, 35.2, 0.24f));
+    sailors.addElement(new Sailor(75, "Mary Vernon",        7, 43.1, 0.47f));
+    sailors.addElement(new Sailor(79, "David Wood",         3, 39.2, 0.67f));
+    sailors.addElement(new Sailor(84, "Mark Smucker",       9, 25.3, 0.84f));
+    sailors.addElement(new Sailor(87, "Martin Reames",     10, 24.1, 0.43f));
+    sailors.addElement(new Sailor(10, "Mike Carey",         9, 40.3, 0.81f));
+    sailors.addElement(new Sailor(21, "David Dewitt",      10, 47.2, 0.12f));
+    sailors.addElement(new Sailor(29, "Tom Reps",           7, 39.1, 0.34f));
+    sailors.addElement(new Sailor(31, "Jeff Naughton",      5, 35.0, 0.22f));
+    sailors.addElement(new Sailor(35, "Miron Livny",        7, 37.6, 0.21f));
+    sailors.addElement(new Sailor(37, "Marv Solomon",      10, 48.9, 0.23f));
 
     boats.addElement(new Boats(1, "Onion",      "white"));
     boats.addElement(new Boats(2, "Buckey",     "red"  ));
@@ -109,16 +113,16 @@ class JoinsDriver implements GlobalConst {
     boats.addElement(new Boats(4, "Voyager",    "green"));
     boats.addElement(new Boats(5, "Wisconsin",  "red"  ));
  
-    reserves.addElement(new Reserves(10, 1, "05/10/95"));
-    reserves.addElement(new Reserves(21, 1, "05/11/95"));
-    reserves.addElement(new Reserves(10, 2, "05/11/95"));
-    reserves.addElement(new Reserves(31, 1, "05/12/95"));
-    reserves.addElement(new Reserves(10, 3, "05/13/95"));
-    reserves.addElement(new Reserves(69, 4, "05/12/95"));
-    reserves.addElement(new Reserves(69, 5, "05/14/95"));
-    reserves.addElement(new Reserves(21, 5, "05/16/95"));
-    reserves.addElement(new Reserves(57, 2, "05/10/95"));
-    reserves.addElement(new Reserves(35, 3, "05/15/95"));
+    reserves.addElement(new Reserves(10, 1, "05/10/95", 0.54f));
+    reserves.addElement(new Reserves(21, 1, "05/11/95", 0.34f));
+    reserves.addElement(new Reserves(10, 2, "05/11/95", 0.42f));
+    reserves.addElement(new Reserves(31, 1, "05/12/95", 0.12f));
+    reserves.addElement(new Reserves(10, 3, "05/13/95", 0.89f));
+    reserves.addElement(new Reserves(69, 4, "05/12/95", 0.58f));
+    reserves.addElement(new Reserves(69, 5, "05/14/95", 0.31f));
+    reserves.addElement(new Reserves(21, 5, "05/16/95", 0.19f));
+    reserves.addElement(new Reserves(57, 2, "05/10/95", 0.76f));
+    reserves.addElement(new Reserves(35, 3, "05/15/95", 0.65f));
 
     boolean status = OK;
     int numsailors = 25;
@@ -128,8 +132,8 @@ class JoinsDriver implements GlobalConst {
     int numboats = 5;
     int numboats_attrs = 3;
     
-    String dbpath = "/tmp/"+System.getProperty("user.name")+".minibase.jointestdb"; 
-    String logpath = "/tmp/"+System.getProperty("user.name")+".joinlog";
+    String dbpath = System.getProperty("user.name")+".minibase.jointestdb"; 
+    String logpath = System.getProperty("user.name")+".joinlog";
 
     String remove_cmd = "/bin/rm -rf ";
     String remove_logcmd = remove_cmd + logpath;
@@ -155,11 +159,12 @@ class JoinsDriver implements GlobalConst {
     SystemDefs sysdef = new SystemDefs( dbpath, 1000, NUMBUF, "Clock" );
     
     // creating the sailors relation
-    AttrType [] Stypes = new AttrType[4];
+    AttrType [] Stypes = new AttrType[5];
     Stypes[0] = new AttrType (AttrType.attrInteger);
     Stypes[1] = new AttrType (AttrType.attrString);
     Stypes[2] = new AttrType (AttrType.attrInteger);
     Stypes[3] = new AttrType (AttrType.attrReal);
+    //Stypes[4] = new AttrType (AttrType.attrReal);
 
     //SOS
     short [] Ssizes = new short [1];
@@ -192,19 +197,23 @@ class JoinsDriver implements GlobalConst {
     t = new Tuple(size);
     try {
       t.setHdr((short) 4, Stypes, Ssizes);
+      System.out.println("No of columns: "+t.attr_Types.length);
     }
     catch (Exception e) {
       System.err.println("*** error in Tuple.setHdr() ***");
       status = FAIL;
       e.printStackTrace();
     }
-    
+    System.out.println("before for loop");
     for (int i=0; i<numsailors; i++) {
       try {
 	t.setIntFld(1, ((Sailor)sailors.elementAt(i)).sid);
 	t.setStrFld(2, ((Sailor)sailors.elementAt(i)).sname);
 	t.setIntFld(3, ((Sailor)sailors.elementAt(i)).rating);
 	t.setFloFld(4, (float)((Sailor)sailors.elementAt(i)).age);
+	//t.setFloFld(5, (float)((Sailor)sailors.elementAt(i)).score);
+	t.setScore((float)((Sailor)sailors.elementAt(i)).score);
+	///System.out.println(t.getFloFld(5));
       }
       catch (Exception e) {
 	System.err.println("*** Heapfile error in Tuple.setStrFld() ***");
@@ -221,6 +230,7 @@ class JoinsDriver implements GlobalConst {
 	e.printStackTrace();
       }      
     }
+    System.out.println("inserted records after for");
     if (status != OK) {
       //bail out
       System.err.println ("*** Error creating relation for sailors");
@@ -345,6 +355,7 @@ class JoinsDriver implements GlobalConst {
 	t.setIntFld(1, ((Reserves)reserves.elementAt(i)).sid);
 	t.setIntFld(2, ((Reserves)reserves.elementAt(i)).bid);
 	t.setStrFld(3, ((Reserves)reserves.elementAt(i)).date);
+	t.setScore(((Reserves)reserves.elementAt(i)).score);
 
       }
       catch (Exception e) {
@@ -375,13 +386,13 @@ class JoinsDriver implements GlobalConst {
     Disclaimer();
     Query1();
     
-    Query2();
+    /*Query2();
     Query3();
     
    
     Query4();
     Query5();
-    Query6();
+    Query6();*/
     
     
     System.out.print ("Finished joins testing"+"\n");
@@ -554,6 +565,7 @@ class JoinsDriver implements GlobalConst {
     Stypes[1] = new AttrType (AttrType.attrString);
     Stypes[2] = new AttrType (AttrType.attrInteger);
     Stypes[3] = new AttrType (AttrType.attrReal);
+    //Stypes[4] = new AttrType (AttrType.attrReal);
 
     //SOS
     short [] Ssizes = new short[1];
@@ -564,7 +576,8 @@ class JoinsDriver implements GlobalConst {
     Sprojection[1] = new FldSpec(new RelSpec(RelSpec.outer), 2);
     Sprojection[2] = new FldSpec(new RelSpec(RelSpec.outer), 3);
     Sprojection[3] = new FldSpec(new RelSpec(RelSpec.outer), 4);
-
+    //Sprojection[4] = new FldSpec(new RelSpec(RelSpec.outer), 5);
+    
     CondExpr [] selects = new CondExpr [1];
     selects = null;
     
@@ -590,6 +603,7 @@ class JoinsDriver implements GlobalConst {
     Rtypes[0] = new AttrType (AttrType.attrInteger);
     Rtypes[1] = new AttrType (AttrType.attrInteger);
     Rtypes[2] = new AttrType (AttrType.attrString);
+   // Rtypes[3] = new AttrType (AttrType.attrReal);
 
     short [] Rsizes = new short[1];
     Rsizes[0] = 15; 
@@ -597,6 +611,7 @@ class JoinsDriver implements GlobalConst {
     Rprojection[0] = new FldSpec(new RelSpec(RelSpec.outer), 1);
     Rprojection[1] = new FldSpec(new RelSpec(RelSpec.outer), 2);
     Rprojection[2] = new FldSpec(new RelSpec(RelSpec.outer), 3);
+   // Rprojection[3] = new FldSpec(new RelSpec(RelSpec.outer), 4);
  
     FileScan am2 = null;
     try {
@@ -625,16 +640,16 @@ class JoinsDriver implements GlobalConst {
     jtype[1] = new AttrType (AttrType.attrString);
  
     TupleOrder ascending = new TupleOrder(TupleOrder.Ascending);
-    SortMerge sm = null;
+    TopSortMerge sm = null;
     try {
-      sm = new SortMerge(Stypes, 4, Ssizes,
+      sm = new TopSortMerge(Stypes, 4, Ssizes,
 			 Rtypes, 3, Rsizes,
 			 1, 4, 
 			 1, 4, 
 			 10,
 			 am, am2, 
 			 false, false, ascending,
-			 outFilter, proj_list, 2);
+			 outFilter, proj_list, 2, 2);
     }
     catch (Exception e) {
       System.err.println("*** join error in SortMerge constructor ***"); 
@@ -658,10 +673,12 @@ class JoinsDriver implements GlobalConst {
  
     try {
       while ((t = sm.get_next()) != null) {
-        t.print(jtype);
-
+        //t.print(jtype);
+        
         qcheck1.Check(t);
       }
+      sm.get_topK();
+    ///cal function
     }
     catch (Exception e) {
       System.err.println (""+e);
@@ -789,16 +806,16 @@ class JoinsDriver implements GlobalConst {
     AttrType [] jtype     = { new AttrType(AttrType.attrString) };
  
     TupleOrder ascending = new TupleOrder(TupleOrder.Ascending);
-    SortMerge sm = null;
+    TopSortMerge sm = null;
     try {
-      sm = new SortMerge(Stypes, 4, Ssizes,
+      sm = new TopSortMerge(Stypes, 4, Ssizes,
 			 Rtypes, 3, Rsizes,
 			 1, 4,
 			 1, 4,
 			 10,
 			 am, am2,
 			 false, false, ascending,
-			 outFilter, proj_list, 1);
+			 outFilter, proj_list, 1, 10);
     }
     catch (Exception e) {
       status = FAIL;
@@ -945,18 +962,18 @@ class JoinsDriver implements GlobalConst {
     AttrType [] jtype     = { new AttrType(AttrType.attrString) };
  
     TupleOrder ascending = new TupleOrder(TupleOrder.Ascending);
-    SortMerge sm = null;
+    TopSortMerge sm = null;
     short  []  jsizes    = new short[1];
     jsizes[0] = 30;
     try {
-      sm = new SortMerge(Stypes, 4, Ssizes,
+      sm = new TopSortMerge(Stypes, 4, Ssizes,
 			 Rtypes, 3, Rsizes,
 			 1, 4,
 			 1, 4,
 			 10,
 			 am, am2,
 			 false, false, ascending,
-			 outFilter, proj_list, 1);
+			 outFilter, proj_list, 1, 10);
     }
     catch (Exception e) {
       status = FAIL;
