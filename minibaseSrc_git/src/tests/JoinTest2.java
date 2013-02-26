@@ -78,6 +78,9 @@ class JoinsDriver2 implements GlobalConst {
     boats    = new Vector();
     reserves = new Vector();
     
+    Calendar beforeInput = Calendar.getInstance();
+    System.out.println(beforeInput.getTimeInMillis());
+    
     sailors.addElement(new Sailor(53, "Bob Holloway",       9, 53.6));
     sailors.addElement(new Sailor(54, "Susan Horowitz",     1, 34.2));
     sailors.addElement(new Sailor(57, "Yannis Ioannidis",   8, 40.2));
@@ -121,6 +124,9 @@ class JoinsDriver2 implements GlobalConst {
     reserves.addElement(new Reserves(57, 2, "05/10/95"));
     reserves.addElement(new Reserves(35, 3, "05/15/95"));
 
+    Calendar afterInput = Calendar.getInstance();
+    System.out.println(afterInput.getTimeInMillis());
+    
     boolean status = OK;
     int numsailors = 25;
     int numsailors_attrs = 4;
@@ -812,7 +818,8 @@ class JoinsDriver2 implements GlobalConst {
       Runtime.getRuntime().exit(1);
     }
     
-    
+    Calendar cal = Calendar.getInstance();
+    System.out.println(cal.getTimeInMillis());
     //QueryCheck qcheck2 = new QueryCheck(2);
     
    

@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.w3c.dom.Attr;
+
 import bufmgr.PageNotReadException;
 
 public class TopRankJoin extends Iterator {
@@ -52,7 +54,7 @@ public class TopRankJoin extends Iterator {
 	private HashMap<Integer, ArrayList<ArrayList<Integer>>> relationsVisited = new HashMap<Integer, ArrayList<ArrayList<Integer>>>();
 
 	TopRankJoin(int numTables, AttrType[][] in, int[] len_in,
-			short[][] s_sizes, int[] join_col_in, Iterator[] am,
+			short[][] s_sizes, int[] join_col_in, Iterator[] am,RelSpec relSpec,
 			IndexType[] index, java.lang.String[] indNames, int amt_of_mem,
 			CondExpr[] outFilter, FldSpec[] proj_list, int n_out_flds, int num,
 			int rank) throws IOException, TopRankJoinException {
@@ -150,6 +152,118 @@ public class TopRankJoin extends Iterator {
 		return new Tuple();
 
 	}
+	
+	private boolean validTuple(Tuple tempTuple,int relationNumber){
+		boolean returnValue = true;
+		try{
+			for(int i=0;i<outFilter.length;i++){
+				AttrType left = outFilter[i].type1;
+				FldSpec operand1Sym = outFilter[i].operand1.symbol;
+				int colNo = operand1Sym.offset;
+				int relNo = operand1Sym.relation.key;
+				if(relNo == relationNumber){
+					switch(left.attrType){
+					case AttrType.attrInteger:
+						int rightPart = outFilter[i].operand2.integer;
+						int leftInt = tempTuple.getIntFld(colNo);
+						switch(outFilter[i].op.attrOperator){
+						case AttrOperator.aopEQ:
+							if(rightPart==leftInt)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopGE:
+							if(leftInt >= rightPart)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopGT:
+							if(leftInt > rightPart)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopLE:
+							if(leftInt <= rightPart)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopLT:
+							if(leftInt < rightPart)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopNE:
+							if(leftInt != rightPart)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						}
+						break;
+					case AttrType.attrReal:
+						float rightFloat = outFilter[i].operand2.real;
+						float leftFloat = tempTuple.getFloFld(colNo);
+						switch(outFilter[i].op.attrOperator){
+						case AttrOperator.aopEQ:
+							if(leftFloat==rightFloat)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopGE:
+							if(leftFloat >= rightFloat)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopGT:
+							if(leftFloat > rightFloat)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopLE:
+							if(leftFloat <= rightFloat)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopLT:
+							if(leftFloat < rightFloat)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						case AttrOperator.aopNE:
+							if(leftFloat != rightFloat)
+								returnValue = returnValue && true;
+							else
+								returnValue = false;
+							break;
+						}
+						break;
+					case AttrType.attrString:
+						String rightString = outFilter[i].operand2.string;
+						String leftString = tempTuple.getStrFld(colNo);
+						if(rightString != leftString)
+							returnValue = returnValue && true;
+						else
+							returnValue = false;
+						break;
+					}
+				}
+			}
+		}
+		catch(Exception e){
+			System.out.println("Exception while processing Tuple in Top Rank Join");
+		}
+		return returnValue;
+	}
 
 	private void createTopKTuples() {
 		Tuple tuple = new Tuple();
@@ -164,6 +278,7 @@ public class TopRankJoin extends Iterator {
 			while (count < knumberOfTuples) {
 				for (int i = 0; i < numberOfTables; i++) {
 					tuple = fileScans[i].getNext(rid);
+					if(validTuple(tuple,i)){
 					switch (attrType.attrType) {
 					case AttrType.attrInteger:
 						int key = tuple.getIntFld(joinColumns[i]);
@@ -240,6 +355,7 @@ public class TopRankJoin extends Iterator {
 						// ArrayList<Integer>>();
 						break;
 					}// end of switch
+					}//end of if
 				}//end of for
 			}//end of while
 			IndexScan iscan[] = new IndexScan[numberOfTables];
