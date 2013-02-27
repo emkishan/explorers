@@ -20,11 +20,10 @@ import index.IndexScan;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
 
-import org.w3c.dom.Attr;
-
+import btree.BTreeFile;
 import bufmgr.PageNotReadException;
 
 public class TopRankJoin extends Iterator {
@@ -269,9 +268,65 @@ public class TopRankJoin extends Iterator {
 		Tuple tuple = new Tuple();
 		RID rid = new RID();
 		int count = 0;
-		AttrType attrType = new AttrType(
-				inputRelations[0][joinColumns[0]].attrType);
+		Tuple interTuple = new Tuple();
+		int attrCount=0;
+		int strSizesCount=0;
+		int attrIndex = 0;
+		int strCount = 0;
+		AttrType attrType = new AttrType(inputRelations[0][joinColumns[0]].attrType);
 		Scan fileScans[] = new Scan[numberOfTables];
+		
+		//get Attribute count
+		for(int i=0;i<inputRelations.length;i++){
+			attrCount+=inputRelations[i].length;
+		}
+		FldSpec[] tProjection = new FldSpec[attrCount];
+		for (int i = 0; i < attrCount; i++)
+			tProjection[i] = new FldSpec(new RelSpec(RelSpec.outer), i + 1);
+		//get string sizes count
+		AttrType[] interAttr = new AttrType[attrCount];
+		for(int i =0;i<stringSizes.length;i++){
+			for(int j=0;j<stringSizes[i].length;j++){
+				strCount++;
+			}
+		}
+		short[] strSizes = new short[strCount];
+		int strIndex =0;
+		//get string sizes for intermediate tuple
+		for(int i =0;i<stringSizes.length;i++){
+			for(int j=0;j<stringSizes[i].length;j++){
+				strSizes[strIndex++]=stringSizes[i][j];
+			}
+		}
+		//get attribute types for intermediate tuple
+		for(int i=0;i<inputRelations.length;i++){
+			for(int j=0;j<inputRelations[i].length;j++){
+				interAttr[attrIndex] = inputRelations[i][j];
+				
+			}
+		}
+		//create intermediate tuple header
+		interTuple.setHdr((short)attrCount, interAttr, strSizes);
+		Heapfile interFile = new Heapfile("InterTuple.in");
+		BTreeFile btf = null;
+		int keysize =4;
+		int strKeyCount = 0;
+		if(attrType.attrType ==AttrType.attrString){
+			for(int i=0;i<inputRelations[0].length;i++){
+				if(inputRelations[0][i].attrType == AttrType.attrString){
+					if(i==joinColumns[0]){
+						keysize = stringSizes[0][strKeyCount];
+						break;
+					}
+					else{
+						strKeyCount++;
+					}
+				}
+				
+		}
+			
+		btf = new BTreeFile("BtreeIndex", attrType.attrType, keysize, 1);	
+		IndexScan interScan = null;
 		try {
 			for (int i = 0; i < numberOfTables; i++)
 				fileScans[i] = heapFiles[i].openScan();
@@ -282,13 +337,11 @@ public class TopRankJoin extends Iterator {
 					switch (attrType.attrType) {
 					case AttrType.attrInteger:
 						int key = tuple.getIntFld(joinColumns[i]);
-						RIDScore newRid = new RIDScore(rid, tuple.getScore());
-						if (ridScore.containsKey(key)) {
-							// ArrayList<ArrayList<RIDScore>> scoresArray =ridScore.get(key);
+						
+						interTuple.setIntFld(key, joinColumns[0]);
 							if (relationsVisited.containsKey(key)) {
 								if (relationsVisited.get(key) != null) {
 									ArrayList<Integer> relations = relationsVisited.get(key).get(0);
-									ArrayList<RIDScore> ridRelations = ridScore.get(key).get(0);
 									boolean flag = false;
 									for (int relationIndex = 0; relationIndex < relations.size(); relationIndex++) {
 										if (i == relations.get(relationIndex)) {
@@ -296,13 +349,180 @@ public class TopRankJoin extends Iterator {
 											ArrayList<Integer> newRelation = relations;
 											relationsVisited.get(key).add(newRelation);
 											flag = true;
-
-											// Add RIDScore to hashMap with new RID
-											ArrayList<RIDScore> ridRelation = ridRelations;
-											ridRelation.add(i, newRid);
-											ridScore.get(key).add(ridRelation);
-
-											// break the loop once the relation and newRID is set
+											int tupleOffset = getTupleOffset(i);
+											CondExpr[] condExpr = getConditionExp(i);
+											for(int exprIndex=0;exprIndex<condExpr.length;exprIndex++){
+												CondExpr conObject = condExpr[exprIndex];
+												if(conObject.operand2.symbol!=null){
+													FldSpec fSpec1 = conObject.operand1.symbol;
+													FldSpec fSpec2 = conObject.operand2.symbol;
+													if(fSpec1.relation.key==i){
+														if(relations.contains(fSpec2.relation.key)){
+															CondExpr[] expr = new CondExpr[1];
+														    expr[0] = new CondExpr();
+														    expr[0].op = new AttrOperator(AttrOperator.aopEQ);
+														    expr[0].type1 = new AttrType(AttrType.attrSymbol);
+														    expr[0].type2 = new AttrType(AttrType.attrString);
+														    expr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[0]);
+														    expr[0].operand2.integer = key;
+														    expr[0].next = null;
+														    expr[1] = null;
+															
+														    interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0], false);
+														    Tuple t = new Tuple();
+														    t.setHdr((short)attrCount, interAttr, strSizes);
+														    RID newRid = new RID();
+														    while((t = interScan.get_next(newRid))!=null){
+														    	//get offset number of that tuple in interTuple
+														    	int offset = getTupleOffset(fSpec2.relation.key)+fSpec2.offset;
+														    	boolean evalCondition = true;
+														    	switch((inputRelations[fSpec2.relation.key][offset-1]).attrType){
+														    	
+														    	case AttrType.attrInteger:
+														    		evalCondition = evaluateCondition(tuple.getIntFld(fSpec1.offset),t.getIntFld(offset),(inputRelations[fSpec2.relation.key][offset-1]),conObject.op);
+														    		
+														    		//Condition evaluates to true so update the tuple
+														    		if(evalCondition){
+														    			updateTuple(tuple, t, i, tupleOffset);
+														    			interFile.updateRecord(newRid, t);
+														    		}
+														    		else{
+														    			//condition fails so add the tuple as new Record in heap file
+														    			Tuple newTuple = new Tuple();
+														    			newTuple.setHdr((short)attrCount, interAttr, strSizes);
+														    			updateTuple(tuple,newTuple, i, tupleOffset);
+														    			interFile.insertRecord(newTuple.getTupleByteArray());
+														    		}
+														    		break;
+														    	case AttrType.attrReal:
+														    		evalCondition = evaluateCondition(tuple.getFloFld(fSpec1.offset),t.getFloFld(offset),(inputRelations[fSpec2.relation.key][offset-1]),conObject.op);
+														    		//Condition evaluates to true so update the tuple
+														    		if(evalCondition){
+														    			updateTuple(tuple, t, i, tupleOffset);
+														    			interFile.updateRecord(newRid, t);
+														    		}
+														    		else{
+														    			//condition fails so add the tuple as new Record in heap file
+														    			Tuple newTuple = new Tuple();
+														    			newTuple.setHdr((short)attrCount, interAttr, strSizes);
+														    			updateTuple(tuple,newTuple, i, tupleOffset);
+														    			interFile.insertRecord(newTuple.getTupleByteArray());
+														    		}
+														    		break;
+														    		
+														    	case AttrType.attrString:
+														    		evalCondition = evaluateCondition(tuple.getStrFld(fSpec1.offset),t.getStrFld(offset),(inputRelations[fSpec2.relation.key][offset-1]),conObject.op);
+														    		//Condition evaluates to true so update the tuple
+														    		if(evalCondition){
+														    			updateTuple(tuple, t, i, tupleOffset);
+														    			interFile.updateRecord(newRid, t);
+														    		}
+														    		else{
+														    			//condition fails so add the tuple as new Record in heap file
+														    			Tuple newTuple = new Tuple();
+														    			newTuple.setHdr((short)attrCount, interAttr, strSizes);
+														    			updateTuple(tuple,newTuple, i, tupleOffset);
+														    			interFile.insertRecord(newTuple.getTupleByteArray());
+														    		}
+														    		break;
+														    	}
+														    }
+														}
+														else{
+															//write tuple to the file
+															Tuple newTuple = new Tuple();
+											    			newTuple.setHdr((short)attrCount, interAttr, strSizes);
+											    			updateTuple(tuple,newTuple, i, tupleOffset);
+											    			newTuple.setIntFld(joinColumns[0], key);
+											    			interFile.insertRecord(newTuple.getTupleByteArray());
+														}
+													}
+													else if(fSpec2.relation.key==i){
+															if(relations.contains(fSpec1.relation.key)){
+																CondExpr[] expr = new CondExpr[1];
+															    expr[0] = new CondExpr();
+															    expr[0].op = new AttrOperator(AttrOperator.aopEQ);
+															    expr[0].type1 = new AttrType(AttrType.attrSymbol);
+															    expr[0].type2 = new AttrType(AttrType.attrString);
+															    expr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[0]);
+															    expr[0].operand2.integer = key;
+															    expr[0].next = null;
+															    expr[1] = null;
+																
+															    interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0], false);
+															    Tuple t = new Tuple();
+															    t.setHdr((short)attrCount, interAttr, strSizes);
+															    RID newRid = new RID();
+															    while((t = interScan.get_next(newRid))!=null){
+															    	//get offset number of that tuple in interTuple
+															    	int offset = getTupleOffset(fSpec1.relation.key)+fSpec1.offset;
+															    	boolean evalCondition = true;
+															    	switch((inputRelations[fSpec1.relation.key][offset-1]).attrType){
+															    	
+															    	case AttrType.attrInteger:
+															    		evalCondition = evaluateCondition(tuple.getIntFld(fSpec2.offset),t.getIntFld(offset),(inputRelations[fSpec1.relation.key][offset-1]),conObject.op);
+															    		
+															    		//Condition evaluates to true so update the tuple
+															    		if(evalCondition){
+															    			updateTuple(tuple, t, i, tupleOffset);
+															    			interFile.updateRecord(newRid, t);
+															    			addKeyToRelations(key, i);
+															    		}
+															    		else{
+															    			//condition fails so add the tuple as new Record in heap file
+															    			Tuple newTuple = new Tuple();
+															    			newTuple.setHdr((short)attrCount, interAttr, strSizes);
+															    			updateTuple(tuple,newTuple, i, tupleOffset);
+															    			interFile.insertRecord(newTuple.getTupleByteArray());
+															    		}
+															    		break;
+															    	case AttrType.attrReal:
+															    		evalCondition = evaluateCondition(tuple.getFloFld(fSpec2.offset),t.getFloFld(offset),(inputRelations[fSpec1.relation.key][offset-1]),conObject.op);
+															    		//Condition evaluates to true so update the tuple
+															    		if(evalCondition){
+															    			updateTuple(tuple, t, i, tupleOffset);
+															    			interFile.updateRecord(newRid, t);
+															    		}
+															    		else{
+															    			//condition fails so add the tuple as new Record in heap file
+															    			Tuple newTuple = new Tuple();
+															    			newTuple.setHdr((short)attrCount, interAttr, strSizes);
+															    			updateTuple(tuple,newTuple, i, tupleOffset);
+															    			interFile.insertRecord(newTuple.getTupleByteArray());
+															    		}
+															    		break;
+															    		
+															    	case AttrType.attrString:
+															    		evalCondition = evaluateCondition(tuple.getStrFld(fSpec2.offset),t.getStrFld(offset),(inputRelations[fSpec1.relation.key][offset-1]),conObject.op);
+															    		//Condition evaluates to true so update the tuple
+															    		if(evalCondition){
+															    			updateTuple(tuple, t, i, tupleOffset);
+															    			interFile.updateRecord(newRid, t);
+															    		}
+															    		else{
+															    			//condition fails so add the tuple as new Record in heap file
+															    			Tuple newTuple = new Tuple();
+															    			newTuple.setHdr((short)attrCount, interAttr, strSizes);
+															    			updateTuple(tuple,newTuple, i, tupleOffset);
+															    			interFile.insertRecord(newTuple.getTupleByteArray());
+															    			
+															    		}
+															    		break;
+															    	}
+															    }
+															}
+															else{
+																//write tuple to the file
+																Tuple newTuple = new Tuple();
+												    			newTuple.setHdr((short)attrCount, interAttr, strSizes);
+												    			updateTuple(tuple,newTuple, i, tupleOffset);
+												    			newTuple.setIntFld(joinColumns[0], key);
+												    			interFile.insertRecord(newTuple.getTupleByteArray());
+															}
+													}
+													
+												}
+											}
 											break;
 										}
 									}
@@ -313,12 +533,7 @@ public class TopRankJoin extends Iterator {
 											// Add new Relation to the HashMap
 											ArrayList<Integer> rel = relationsVisited.get(key).get(index);
 											rel.add(i);
-											relationsVisited.get(key).add(rel);
-
-											// Add new RIDScore to the HashMap
-											ArrayList<RIDScore> ridRel = ridScore.get(key).get(index);
-											ridRel.add(newRid);
-											ridScore.get(key).add(ridRel);
+											relationsVisited.get(key).add(rel);											
 										}
 									}
 								}
@@ -344,15 +559,9 @@ public class TopRankJoin extends Iterator {
 					case AttrType.attrReal:
 						HashMap<Float, ArrayList<ArrayList<RIDScore>>> ridScoreF = new HashMap<Float, ArrayList<ArrayList<RIDScore>>>();
 						HashMap<Float, ArrayList<ArrayList<Integer>>> relationsVisitedF = new HashMap<Float, ArrayList<ArrayList<Integer>>>();
-						// ridScore = new HashMap<Float, ArrayList<RIDScore>>();
-						// relationsVisited = new HashMap<Float,
-						// ArrayList<Integer>>();
 						break;
 					case AttrType.attrString:
-						// ridScore = new HashMap<String,
-						// ArrayList<RIDScore>>();
-						// relationsVisited = new HashMap<String,
-						// ArrayList<Integer>>();
+						
 						break;
 					}// end of switch
 					}//end of if
@@ -621,5 +830,212 @@ public class TopRankJoin extends Iterator {
 			}
 		}
 
+	}
+	
+	private void createTupleHdr(Tuple tuple){
+		FldSpec[] pList = proj_list;
+		CondExpr[] oFilter = outFilter;
+		int projLength = pList.length;
+		ArrayList<AttrType> attrTypes = new ArrayList<AttrType>();
+		ArrayList<Short> stringSizes = new ArrayList<Short>();
+		Set<Integer> fldSet = new HashSet<Integer>();
+		//To add projList attributes in out tuple
+		for(int i=0;i<pList.length;i++){
+			int relationIndex = pList[i].relation.key;
+			int fieldOffset = pList[i].offset-1;
+			attrTypes.add(inputRelations[relationIndex][fieldOffset]);
+		}
+		/*for(int i =0;i<numberOfTables;i++){
+			
+		}*/
+		}
+	private CondExpr[] getConditionExp(int tableIndex){
+		ArrayList<CondExpr> condExp = new ArrayList<CondExpr>();
+		for(int i=0;i<outFilter.length;i++){
+			CondExpr tableCondition = outFilter[i];
+			if(tableCondition.operand1.symbol.relation.key==tableIndex||tableCondition.operand2.symbol.relation.key==tableIndex){
+				condExp.add(tableCondition);
+			}
+		}		
+		return (CondExpr[])condExp.toArray();
+	}
+	
+	private int getTupleOffset(int tableIndex){
+		int offset = 0;
+		for(int i=0;i<tableIndex;i++){
+			offset+=inputRelations[i].length;
+		}
+		return offset;
+		
+	}
+	
+	private boolean evaluateCondition(Object obj1, Object obj2, AttrType attrType, AttrOperator attrOperator){
+		boolean returnValue = true;
+		switch(attrType.attrType){
+		case AttrType.attrInteger:
+			int leftInt = (Integer)obj1;
+			int rightPart = (Integer)obj2;
+			switch(attrOperator.attrOperator){
+			case AttrOperator.aopEQ:
+				if(rightPart==leftInt)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopGE:
+				if(leftInt >= rightPart)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopGT:
+				if(leftInt > rightPart)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopLE:
+				if(leftInt <= rightPart)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopLT:
+				if(leftInt < rightPart)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopNE:
+				if(leftInt != rightPart)
+					return returnValue;
+				else
+					return !returnValue;
+			}
+			break;
+		case AttrType.attrReal:
+			float leftFloat = (Float)obj1;
+			float rightFloat = (Float)obj2;
+			switch(attrOperator.attrOperator){
+			case AttrOperator.aopEQ:
+				if(rightFloat==leftFloat)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopGE:
+				if(leftFloat >= rightFloat)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopGT:
+				if(leftFloat > rightFloat)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopLE:
+				if(leftFloat <= rightFloat)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopLT:
+				if(leftFloat < rightFloat)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopNE:
+				if(leftFloat != rightFloat)
+					return returnValue;
+				else
+					return !returnValue;
+			}
+			break;
+		case AttrType.attrString:
+			String s1 = obj1.toString();
+			String s2 = obj2.toString();
+			switch(attrOperator.attrOperator){
+			case AttrOperator.aopEQ:
+				if(s1.equalsIgnoreCase(s2))
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopGE:
+				if(s1.compareToIgnoreCase(s2)>=0)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopGT:
+				if(s1.compareToIgnoreCase(s2)>0)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopLE:
+				if(s1.compareToIgnoreCase(s2)<=0)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopLT:
+				if(s1.compareToIgnoreCase(s2)<0)
+					return returnValue;
+				else
+					return !returnValue;
+			case AttrOperator.aopNE:
+				if(!(s1.equalsIgnoreCase(s2)))
+					return returnValue;
+				else
+					return !returnValue;
+				
+			}
+			break;
+		}
+		return false;
+	}
+	
+	private void updateTuple(Tuple inTuple,Tuple outTuple, int tableIndex, int offset){
+		int fieldCount =1;
+		for(int tField=1;tField<=inputRelations[tableIndex].length;tField++){
+			switch(inputRelations[tableIndex][tField].attrType){
+				case AttrType.attrInteger:
+					try {
+						outTuple.setIntFld(offset + 1,
+								inTuple.getIntFld(fieldCount));
+						fieldCount++;
+					} catch (FieldNumberOutOfBoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					break;
+				case AttrType.attrReal:
+					try {
+						outTuple.setFloFld(offset+1, inTuple.getFloFld(fieldCount));
+						fieldCount++;
+					} catch (FieldNumberOutOfBoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					break;
+				case AttrType.attrString:
+					try {
+						outTuple.setStrFld(offset+1, inTuple.getStrFld(fieldCount));
+						fieldCount++;
+					} catch (FieldNumberOutOfBoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					break;
+			}
+		}
+	}
+	
+	private void addKeyToRelations(int key, int tableIndex){
+		for (int index = 0; index < relationsVisited.get(key).size(); index++) {
+			// Add new Relation to the HashMap
+			ArrayList<Integer> rel = relationsVisited.get(key).get(index);
+			rel.add(tableIndex);
+			relationsVisited.get(key).add(rel);											
+		}
 	}
 }
