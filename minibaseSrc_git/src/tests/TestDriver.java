@@ -1,8 +1,10 @@
 package tests;
 import global.AttrOperator;
 import global.AttrType;
+import global.GlobalConst;
 import global.IndexType;
 import global.RID;
+import global.SystemDefs;
 import global.TupleOrder;
 import heap.FieldNumberOutOfBoundException;
 import heap.HFBufMgrException;
@@ -14,21 +16,29 @@ import heap.InvalidTupleSizeException;
 import heap.InvalidTypeException;
 import heap.SpaceNotAvailableException;
 import heap.Tuple;
+import index.IndexException;
 import iterator.CondExpr;
 import iterator.FileScan;
 import iterator.FileScanException;
 import iterator.InvalidRelation;
 import iterator.Iterator;
 import iterator.FldSpec;
+import iterator.JoinsException;
+import iterator.LowMemException;
+import iterator.PredEvalException;
 import iterator.RelSpec;
 import iterator.Sort;
 import iterator.SortException;
 import iterator.TopRankJoin;
 import iterator.TopRankJoinException;
 import iterator.TupleUtilsException;
+import iterator.UnknowAttrType;
+import iterator.UnknownKeyTypeException;
 
 import java.io.*;
 import java.util.Vector;
+
+import bufmgr.PageNotReadException;
 
 
 import chainexception.*;
@@ -99,7 +109,8 @@ public class TestDriver {
    */
 
   protected TestDriver (String nameRoot) {
-	  
+	    dbpath = "F:\\jyothi.minibase-db"; 
+	    logpath = "F:\\jyothi.minibase-log"; 
 	  R1  = new Vector();
 	  R2  = new Vector();
 	  
@@ -118,10 +129,12 @@ public class TestDriver {
 	  short[] strSizes = new short[1];
 	  strSizes[0] = 25;
 	  AttrType[][] attrTypeList = new AttrType[2][];
+	  	attrTypeList[0] = new AttrType[3];
 	    attrTypeList[0][0] = new AttrType(AttrType.attrInteger);
 	    attrTypeList[0][1] = new AttrType(AttrType.attrString);
 	    attrTypeList[0][2] = new AttrType(AttrType.attrReal);
 	    
+	    attrTypeList[1] = new AttrType[4];
 	    attrTypeList[1][0] = new AttrType(AttrType.attrInteger);
 	    attrTypeList[1][1] = new AttrType(AttrType.attrString);
 	    attrTypeList[1][2] = new AttrType(AttrType.attrInteger);
@@ -139,6 +152,7 @@ public class TestDriver {
 		// TODO Auto-generated catch block
 		e1.printStackTrace();
 	}
+	  SystemDefs sysdef = new SystemDefs( dbpath, 1000, GlobalConst.NUMBUF, "Clock" );
 	  RID             rid;
 	    Heapfile        f = null;
 	    Heapfile        f1 = null;
@@ -292,6 +306,63 @@ public class TestDriver {
 		}
 		iteratorList[0] = topIterator;
 		iteratorList[1] = topIterator1;
+		Tuple tuple1 = new Tuple();
+		try {
+			tuple1.setHdr((short)3, attrTypeList[0], strSizes);
+		} catch (InvalidTypeException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (InvalidTupleSizeException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+			try {
+				while ((tuple1 = topIterator.get_next()) != null) {
+					tuple1.print(tuple1.attr_Types);
+				}
+			} catch (JoinsException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IndexException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidTupleSizeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidTypeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (PageNotReadException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (TupleUtilsException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (PredEvalException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (SortException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (LowMemException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (UnknowAttrType e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (UnknownKeyTypeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
   //  sprintf( dbpath, MINIBASE_DB, nameRoot, getpid() );
   //  sprintf( logpath, MINIBASE_LOG, nameRoot, getpid() );
 
@@ -302,8 +373,7 @@ public class TestDriver {
     //To port it to a different platform, get "user.name" should
     //still work well because this feature is not meant to be UNIX
     //dependent. 
-    dbpath = "F:\\jyothi.minibase-db"; 
-    logpath = "F:\\jyothi.minibase-log"; 
+
   }
 
   /**
@@ -418,7 +488,7 @@ public class TestDriver {
     return _pass;
   }
 public static void main(String args[]){
-	TestDriver test = new TestDriver();
+	TestDriver test = new TestDriver("Deepu");
 	test.runAllTests();
 }
   protected boolean runAllTests() {

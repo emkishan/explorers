@@ -52,7 +52,7 @@ public class TopRankJoin extends Iterator {
 	private RID fileRid;
 	private boolean firstTime;
 	private String[] indexFileNames;
-	private boolean duplFlag= true;
+	private boolean duplFlag= false;
 	private HashMap<Integer, ArrayList<ArrayList<RIDScore>>> ridScore = new HashMap<Integer, ArrayList<ArrayList<RIDScore>>>();
 	private HashMap<Integer, ArrayList<ArrayList<Integer>>> relationsVisited = new HashMap<Integer, ArrayList<ArrayList<Integer>>>();
 
@@ -65,9 +65,12 @@ public class TopRankJoin extends Iterator {
 		numberOfTables = numTables;
 		inputRelations = new AttrType[numTables][];
 		indexFileNames = indNames;
+		joinColumns=join_col_in;
 		outFile = null;
+		iterators = am;
+		System.out.println("iterators : "+iterators.length);
 		try {
-			outFile = new Heapfile("Test.in");
+			outFile = new Heapfile("TopRankJoin.in");
 		} catch (HFException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -83,15 +86,22 @@ public class TopRankJoin extends Iterator {
 			
 		}
 		// Copy the attribute types
-
-		for (int i = 0; i < numTables; i++) {
+		lengths = new int[numTables];
+		/*for (int i = 0; i < numTables; i++) {
 			lengths[i] = len_in[i];
 			inputRelations[i] = new AttrType[len_in[i]];
 			System.arraycopy(inputRelations[i], 0, in[i], 0, len_in[i]);
+		}*/
+		
+		for(int i=0;i<in.length;i++){
+			inputRelations[i] = new AttrType[in[i].length];
+			for(int j=0;j<in[i].length;j++){
+				inputRelations[i][j] = in[i][j];
+			}
 		}
 
 		// Copy the iterators
-
+		iterators = new Iterator[am.length];
 		for (int i = 0; i < numTables; i++) {
 			iterators[i] = am[i];
 		}
@@ -99,9 +109,11 @@ public class TopRankJoin extends Iterator {
 		innerTuples = new Tuple[numTables];
 
 		// Copy the String sizes and initialize tuples
+		stringSizes = new short[s_sizes.length][];
+		//innerTuples = new
 		for (int i = 0; i < numTables; i++) {
 			stringSizes[i] = s_sizes[i];
-			innerTuples[i] = new Tuple();
+			//innerTuples[i] = new Tuple();
 		}
 
 		JTuple = new Tuple();
@@ -116,15 +128,20 @@ public class TopRankJoin extends Iterator {
 		// Initialize scanned and probed counters
 		numOfProbed = new int[numTables];
 		numOfScanned = new int[numTables];
-		for (int i = 0; i < numTables; i++) {
+		this.outFilter = new CondExpr[outFilter.length];
+		this.proj_list = new FldSpec[proj_list.length];
+		for (int i = 0; i < outFilter.length; i++) {
 			this.outFilter[i] = outFilter[i];
-			this.proj_list[i] = proj_list[i];
 			numOfProbed[i] = 0;
 			numOfScanned[i] = 0;
 		}
-
+		
+		for(int i=0;i<proj_list.length;i++){
+			this.proj_list[i] = proj_list[i];
+		}
+		
 		try {
-			TupleUtils.setup_op_tuple(JTuple, Restypes, inputRelations, len_in,
+			TupleUtils.setup_op_tuple(JTuple, Restypes, in, len_in,
 					s_sizes, proj_list, n_out_flds);
 		} catch (TupleUtilsException e) {
 			throw new TopRankJoinException(e,
@@ -144,6 +161,7 @@ public class TopRankJoin extends Iterator {
 			throw new TopRankJoinException(e, " Create new heapfile failed ");
 		}
 		firstTime = true;
+		createTopKTuples();
 	}
 
 	public Tuple get_next() throws IOException, JoinsException, IndexException,
@@ -286,10 +304,12 @@ public class TopRankJoin extends Iterator {
 		//get Attribute count
 		for(int i=0;i<inputRelations.length;i++){
 			//Added to store score as  a field
-			attrCount+=inputRelations[i].length+1;
+			attrCount+=inputRelations[i].length;
 		}
+		System.out.println("attrCount "+attrCount);
 		//count of visited relations is stored in an integer variable
-		attrCount+=inputRelations.length+1;
+		attrCount+=1;
+		System.out.println("attrCount "+attrCount);
 		FldSpec[] tProjection = new FldSpec[attrCount];
 		for (int i = 0; i < attrCount; i++)
 			tProjection[i] = new FldSpec(new RelSpec(RelSpec.outer), i + 1);
@@ -314,7 +334,7 @@ public class TopRankJoin extends Iterator {
 				interAttr[attrIndex++] = inputRelations[i][j];
 
 			}
-			interAttr[attrIndex++]= new AttrType(AttrType.attrReal);
+			//interAttr[attrIndex++]= new AttrType(AttrType.attrReal);
 		}
 		interAttr[attrIndex]= new AttrType(AttrType.attrInteger);
 		//create intermediate tuple header
@@ -386,7 +406,7 @@ public class TopRankJoin extends Iterator {
 			while (count < knumberOfTuples) {
 				for (int i = 0; i < numberOfTables; i++) {
 					int tupleOffset = getTupleOffset(i);
-					tuple = fileScans[i].getNext(rid);
+					tuple = iterators[i].get_next();
 					boolean newTupleFlag=true;
 					if(validTuple(tuple,i)){
 						switch (attrType.attrType) {
@@ -1127,6 +1147,7 @@ public class TopRankJoin extends Iterator {
 			}				
 		}// end of try
 		catch (Exception e) {
+			e.printStackTrace();
 			System.out.println("Exception in createTopKTuples");
 		}
 	}
