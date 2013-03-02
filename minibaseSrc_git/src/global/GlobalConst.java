@@ -30,4 +30,6 @@ public interface GlobalConst {
   public static final int MAX_NAME = 50;
 
   public static final int INVALID_PAGE = -1;
+  
+  public static final int INDEX_REC_LEN = 32;
 }

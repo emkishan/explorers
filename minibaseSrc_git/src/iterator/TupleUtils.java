@@ -147,14 +147,29 @@ public class TupleUtils {
 	 */
 
 	public static boolean Equal(Tuple t1, Tuple t2, AttrType types[], int len)
-			throws IOException, UnknowAttrType, TupleUtilsException {
-		int i;
-
-		for (i = 1; i <= len; i++)
-			if (CompareTupleWithTuple(types[i - 1], t1, i, t2, i) != 0)
-				return false;
-		return true;
-	}
+		    throws IOException,UnknowAttrType,TupleUtilsException
+		    {
+		      int i;
+		      
+		      /*     
+		      for (i = 1; i <= len; i++)
+			if (CompareTupleWithTuple(types[i-1], t1, i, t2, i) != 0)
+			  return false;
+		      return true;*/
+		      
+		      /*
+		       * Modified by Neethu
+		       * Assume the last column to be score
+		       * Execute the column comparison by not considering the last column i.e i ranging from column 1 to len-1
+		       */
+		      if(len==1) return false;
+		      else{
+		      for (i = 1; i <= len-1; i++)
+		    		if (CompareTupleWithTuple(types[i-1], t1, i, t2, i) != 0)
+		    		  return false;
+		      }
+		      return true;
+		    }
 
 	/**
 	 * get the string specified by the field number
@@ -367,8 +382,8 @@ public class TupleUtils {
 						in1[proj_list[i].offset - 1].attrType);
 			}
 
-			else
-				throw new InvalidRelation("Invalid relation -innerRel");
+			/*else
+				throw new InvalidRelation("Invalid relation -innerRel");*/
 		}
 
 		// Now construct the res_str_sizes array.
