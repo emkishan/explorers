@@ -53,7 +53,7 @@ public class TopRankJoin extends Iterator {
 	private RID fileRid;
 	private boolean firstTime;
 	private String[] indexFileNames;
-	private boolean duplFlag= false;
+	private boolean duplFlag= true;
 	private HashMap<Integer, ArrayList<ArrayList<RIDScore>>> ridScore = new HashMap<Integer, ArrayList<ArrayList<RIDScore>>>();
 	private HashMap<Integer, ArrayList<ArrayList<Integer>>> relationsVisited = new HashMap<Integer, ArrayList<ArrayList<Integer>>>();
 	private Tuple t = new Tuple();
@@ -71,7 +71,7 @@ public class TopRankJoin extends Iterator {
 		joinColumns=join_col_in;
 		outFile = null;
 		iterators = am;
-		System.out.println("iterators : "+iterators.length);
+		//System.out.println("iterators : "+iterators.length);
 		try {
 			outFile = new Heapfile("TopRankJoin.in");
 		} catch (HFException e1) {
@@ -185,7 +185,7 @@ public class TopRankJoin extends Iterator {
 		boolean returnValue = true;
 		try{
 			for(int i=0;i<outFilter.length;i++){
-				AttrType left = outFilter[i].type1;
+				AttrType left = outFilter[i].type2;
 				FldSpec operand1Sym = outFilter[i].operand1.symbol;
 				int colNo = operand1Sym.offset;
 				int relNo = operand1Sym.relation.key;
@@ -500,13 +500,13 @@ public class TopRankJoin extends Iterator {
 															expr[0] = new CondExpr();
 															expr[0].op = new AttrOperator(AttrOperator.aopEQ);
 															expr[0].type1 = new AttrType(AttrType.attrSymbol);
-															expr[0].type2 = new AttrType(AttrType.attrString);
-															expr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[0]);
+															expr[0].type2 = new AttrType(AttrType.attrInteger);
+															expr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[0]+1);
 															expr[0].operand2.integer = key;
 															expr[0].next = null;
 															expr[1] = null;
 
-															interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0], false);
+															interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0]+1, false);
 													
 															t.setHdr((short)attrCount, interAttr, strSizes);
 															RID newRid = new RID();
@@ -525,6 +525,9 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple, t, i, tupleOffset,0);
 																		t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																		interFile.updateRecord(newRid, t);
+																		addKeyToRelations(key, i);
+																		if(t.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else if(evalCondition&&tupleExists&&duplFlag){
 																		Tuple newTuple = new Tuple();
@@ -533,6 +536,8 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple,newTuple, i, tupleOffset, 1);
 																		newTuple.setIntFld(attrCount, 2);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else{
 																		//condition fails so add the tuple as new Record in heap file
@@ -545,6 +550,8 @@ public class TopRankJoin extends Iterator {
 																			newTuple.setIntFld(attrCount, 1);
 																			interFile.insertRecord(newTuple.getTupleByteArray());
 																			newTupleFlag = false;
+																			if(newTuple.getIntFld(attrCount)==numberOfTables)
+																				count++;
 																		}
 																		}else{
 																			relationsVisited.remove(key);
@@ -560,6 +567,9 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple, t, i, tupleOffset,0);
 																		t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																		interFile.updateRecord(newRid, t);
+																		addKeyToRelations(key, i);
+																		if(t.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else if(evalCondition&&tupleExists&&duplFlag){
 																		Tuple newTuple = new Tuple();
@@ -568,6 +578,8 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(attrCount, 2);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else{
 																		//condition fails so add the tuple as new Record in heap file
@@ -580,6 +592,8 @@ public class TopRankJoin extends Iterator {
 																			newTuple.setIntFld(attrCount, 1);
 																			interFile.insertRecord(newTuple.getTupleByteArray());
 																			newTupleFlag = false;
+																			if(newTuple.getIntFld(attrCount)==numberOfTables)
+																				count++;
 																		}
 																	}else{
 																		relationsVisited.remove(key);
@@ -595,6 +609,9 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple, t, i, tupleOffset,0);
 																		t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																		interFile.updateRecord(newRid, t);
+																		addKeyToRelations(key, i);
+																		if(t.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else if(evalCondition&&tupleExists&&duplFlag){
 																		Tuple newTuple = new Tuple();
@@ -603,6 +620,8 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple,newTuple, i, tupleOffset, 1);
 																		newTuple.setIntFld(attrCount, 2);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else{
 																		//condition fails so add the tuple as new Record in heap file
@@ -615,6 +634,8 @@ public class TopRankJoin extends Iterator {
 																			newTuple.setIntFld(attrCount, 1);
 																			interFile.insertRecord(newTuple.getTupleByteArray());
 																			newTupleFlag=false;
+																			if(newTuple.getIntFld(attrCount)==numberOfTables)
+																				count++;
 																		}
 																		}else{
 																			relationsVisited.remove(key);
@@ -633,26 +654,40 @@ public class TopRankJoin extends Iterator {
 															newTuple.setIntFld(joinColumns[0], key);
 															newTuple.setIntFld(attrCount, 1);
 															interFile.insertRecord(newTuple.getTupleByteArray());
+															if(newTuple.getIntFld(attrCount)==numberOfTables)
+																count++;
 														}
 													}
 													else if(fSpec2.relation.key==i){
 														if(relations.contains(fSpec1.relation.key)){
-															CondExpr[] expr = new CondExpr[1];
+															CondExpr[] expr = new CondExpr[2];
 															expr[0] = new CondExpr();
 															expr[0].op = new AttrOperator(AttrOperator.aopEQ);
 															expr[0].type1 = new AttrType(AttrType.attrSymbol);
-															expr[0].type2 = new AttrType(AttrType.attrString);
-															expr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[0]);
+															expr[0].type2 = new AttrType(AttrType.attrInteger);
+															expr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[0]+1);
 															expr[0].operand2.integer = key;
 															expr[0].next = null;
 															expr[1] = null;
 															
-															interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0], false);
+															interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0]+1, false);
 															Tuple t = new Tuple();
 															t.setHdr((short)attrCount, interAttr, strSizes);
 															RID newRid = new RID();
+															RID prevRid = new RID();
 															while((t = interScan.get_next())!=null){
 																//get offset number of that tuple in interTuple
+																System.out.println("-----Previous RID details----");
+																System.out.println("Slot No: "+prevRid.slotNo);
+																System.out.println("Pid: "+ prevRid.pageNo.pid);
+																System.out.println("-----------------------------");
+																
+																System.out.println("-----InterScan RID details----");
+																System.out.println("InterScan Slot No: "+interScan.getRID().slotNo);
+																System.out.println("InterScan Pid: "+ interScan.getRID().pageNo.pid);
+																System.out.println("-----------------------------");
+																if((prevRid.slotNo == interScan.getRID().slotNo) && (prevRid.pageNo.pid==interScan.getRID().pageNo.pid))
+																	continue;
 																int condOffset = getTupleOffset(fSpec1.relation.key);
 																int offset = condOffset+fSpec1.offset;						    	
 																boolean evalCondition = true;
@@ -667,6 +702,8 @@ public class TopRankJoin extends Iterator {
 																		t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																		interFile.updateRecord(newRid, t);
 																		addKeyToRelations(key, i);
+																		if(t.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else if(evalCondition&&tupleExists&&duplFlag){
 																		Tuple newTuple = new Tuple();
@@ -675,6 +712,8 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(attrCount, 2);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else{
 																		//condition fails so add the tuple as new Record in heap file
@@ -687,6 +726,8 @@ public class TopRankJoin extends Iterator {
 																			newTuple.setIntFld(attrCount, 1);
 																			interFile.insertRecord(newTuple.getTupleByteArray());
 																			newTupleFlag=false;
+																			if(newTuple.getIntFld(attrCount)==numberOfTables)
+																				count++;
 																		}
 																		}else{
 																			relationsVisited.remove(key);
@@ -703,6 +744,8 @@ public class TopRankJoin extends Iterator {
 																		t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																		interFile.updateRecord(newRid, t);
 																		addKeyToRelations(key, i);
+																		if(t.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else if(evalCondition&&tupleExists&&duplFlag){
 																		Tuple newTuple = new Tuple();
@@ -711,6 +754,8 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(attrCount, 2);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else{
 																		//condition fails so add the tuple as new Record in heap file
@@ -723,6 +768,8 @@ public class TopRankJoin extends Iterator {
 																			newTuple.setIntFld(attrCount, 1);
 																			interFile.insertRecord(newTuple.getTupleByteArray());
 																			newTupleFlag=false;
+																			if(newTuple.getIntFld(attrCount)==numberOfTables)
+																				count++;
 																		}
 																		}else{
 																			relationsVisited.remove(key);
@@ -738,7 +785,10 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(tuple, t, i, tupleOffset,0);
 																		t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																		interFile.updateRecord(newRid, t);
+																		
 																		addKeyToRelations(key, i);
+																		if(t.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else if(evalCondition&&tupleExists&&duplFlag){
 																		Tuple newTuple = new Tuple();
@@ -746,7 +796,17 @@ public class TopRankJoin extends Iterator {
 																		updateTuple(t, newTuple,fSpec1.relation.key, condOffset,0);
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(attrCount, 2);
-																		interFile.insertRecord(newTuple.getTupleByteArray());
+																		System.out.println("t1: "+newTuple.getIntFld(1));
+																		System.out.println("t2: "+newTuple.getStrFld(2));
+																		System.out.println("t3: "+newTuple.getFloFld(3));
+																		System.out.println("t4: "+newTuple.getIntFld(4));
+																		System.out.println("t5: "+newTuple.getStrFld(5));
+																		System.out.println("t6: "+newTuple.getIntFld(6));
+																		System.out.println("t7: "+newTuple.getFloFld(7));
+																		System.out.println("t8: "+newTuple.getIntFld(8));
+																		prevRid = interFile.insertRecord(newTuple.getTupleByteArray());
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	else{
 																		//condition fails so add the tuple as new Record in heap file
@@ -759,6 +819,8 @@ public class TopRankJoin extends Iterator {
 																			newTuple.setIntFld(attrCount, 1);
 																			interFile.insertRecord(newTuple.getTupleByteArray());
 																			newTupleFlag=false;
+																			if(newTuple.getIntFld(attrCount)==numberOfTables)
+																				count++;
 																		}
 																		}else{
 																			relationsVisited.remove(key);
@@ -777,6 +839,8 @@ public class TopRankJoin extends Iterator {
 															newTuple.setIntFld(joinColumns[0], key);
 															newTuple.setIntFld(attrCount, 1);
 															interFile.insertRecord(newTuple.getTupleByteArray());
+															if(newTuple.getIntFld(attrCount)==numberOfTables)
+																count++;
 														}
 													}
 
@@ -816,7 +880,7 @@ public class TopRankJoin extends Iterator {
 														expr[0].next = null;
 														expr[1] = null;
 
-														interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0], false);
+														interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0]+1, false);
 														Tuple t = new Tuple();
 														t.setHdr((short)attrCount, interAttr, strSizes);
 														RID newRid = new RID();
@@ -834,7 +898,12 @@ public class TopRankJoin extends Iterator {
 																//Condition evaluates to true so update the tuple
 																if(evalCondition){
 																	updateTuple(tuple, t, i, tupleOffset,1);
+																	t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																	interFile.updateRecord(newRid, t);
+																	//int arraySize = relationsVisited.get(key).size();
+																	addKeyToRelations(key, i);
+																	if(t.getIntFld(attrCount)==numberOfTables)
+																		count++;
 																}
 																else{
 																	//condition fails so add the tuple as new Record in heap file
@@ -844,8 +913,11 @@ public class TopRankJoin extends Iterator {
 																		newTuple.setHdr((short)attrCount, interAttr, strSizes);
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(joinColumns[0], key);
+																		newTuple.setIntFld(attrCount, 1);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
 																		newTupleFlag = false;
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	}
 																}
@@ -857,6 +929,10 @@ public class TopRankJoin extends Iterator {
 																if(evalCondition){
 																	updateTuple(tuple, t, i, tupleOffset,1);
 																	interFile.updateRecord(newRid, t);
+																	addKeyToRelations(key, i);
+																	t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
+																	if(t.getIntFld(attrCount)==numberOfTables)
+																		count++;
 																}
 																else{
 																	//condition fails so add the tuple as new Record in heap file
@@ -866,8 +942,11 @@ public class TopRankJoin extends Iterator {
 																		newTuple.setHdr((short)attrCount, interAttr, strSizes);
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(joinColumns[0], key);
+																		newTuple.setIntFld(attrCount, 1);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
 																		newTupleFlag = false;
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	}
 																}
@@ -878,7 +957,11 @@ public class TopRankJoin extends Iterator {
 																//Condition evaluates to true so update the tuple
 																if(evalCondition){
 																	updateTuple(tuple, t, i, tupleOffset,1);
+																	t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																	interFile.updateRecord(newRid, t);
+																	addKeyToRelations(key, i);
+																	if(t.getIntFld(attrCount)==numberOfTables)
+																		count++;
 																}
 																else{
 																	//condition fails so add the tuple as new Record in heap file
@@ -888,8 +971,11 @@ public class TopRankJoin extends Iterator {
 																		newTuple.setHdr((short)attrCount, interAttr, strSizes);
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(joinColumns[0], key);
+																		newTuple.setIntFld(attrCount, 1);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
 																		newTupleFlag=false;
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	}
 																}
@@ -910,12 +996,13 @@ public class TopRankJoin extends Iterator {
 														expr[0].next = null;
 														expr[1] = null;
 
-														interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0], false);
+														interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0]+1, false);
 														Tuple t = new Tuple();
 														t.setHdr((short)attrCount, interAttr, strSizes);
 														RID newRid = new RID();
 														while((t = interScan.get_next())!=null){
 															//get offset number of that tuple in interTuple
+															newRid = interScan.getRID();
 															int condOffset = getTupleOffset(fSpec1.relation.key);
 															int offset = condOffset+fSpec1.offset;						    	
 															boolean evalCondition = true;
@@ -928,8 +1015,11 @@ public class TopRankJoin extends Iterator {
 																//Condition evaluates to true so update the tuple
 																if(evalCondition){
 																	updateTuple(tuple, t, i, tupleOffset,1);
+																	t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																	interFile.updateRecord(newRid, t);
 																	addKeyToRelations(key, i);
+																	if(t.getIntFld(attrCount)==numberOfTables)
+																		count++;
 																}
 																else{
 																	//condition fails so add the tuple as new Record in heap file
@@ -939,8 +1029,11 @@ public class TopRankJoin extends Iterator {
 																		newTuple.setHdr((short)attrCount, interAttr, strSizes);
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(joinColumns[0], key);
+																		newTuple.setIntFld(attrCount, 1);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
 																		newTupleFlag=false;
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	}
 																}
@@ -952,7 +1045,9 @@ public class TopRankJoin extends Iterator {
 																//Condition evaluates to true so update the tuple
 																if(evalCondition){
 																	updateTuple(tuple, t, i, tupleOffset,1);
+																	t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																	interFile.updateRecord(newRid, t);
+																	addKeyToRelations(key, i);
 																}
 																else{
 																	//condition fails so add the tuple as new Record in heap file
@@ -962,8 +1057,11 @@ public class TopRankJoin extends Iterator {
 																		newTuple.setHdr((short)attrCount, interAttr, strSizes);
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(joinColumns[0], key);
+																		newTuple.setIntFld(attrCount, 1);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
 																		newTupleFlag=false;
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	}
 																}
@@ -974,7 +1072,19 @@ public class TopRankJoin extends Iterator {
 																//Condition evaluates to true so update the tuple
 																if(evalCondition){
 																	updateTuple(tuple, t, i, tupleOffset,1);
+																	t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 																	interFile.updateRecord(newRid, t);
+																	System.out.println("t1: "+t.getIntFld(1));
+																	System.out.println("t2: "+t.getStrFld(2));
+																	System.out.println("t3: "+t.getFloFld(3));
+																	System.out.println("t4: "+t.getIntFld(4));
+																	System.out.println("t5: "+t.getStrFld(5));
+																	System.out.println("t6: "+t.getIntFld(6));
+																	System.out.println("t7: "+t.getFloFld(7));
+																	System.out.println("t8: "+t.getIntFld(8));
+																	addKeyToRelations(key, i);
+																	if(t.getIntFld(attrCount)==numberOfTables)
+																		count++;
 																}
 																else{
 																	//condition fails so add the tuple as new Record in heap file
@@ -984,8 +1094,11 @@ public class TopRankJoin extends Iterator {
 																		newTuple.setHdr((short)attrCount, interAttr, strSizes);
 																		updateTuple(tuple,newTuple, i, tupleOffset,1);
 																		newTuple.setIntFld(joinColumns[0], key);
+																		newTuple.setIntFld(attrCount, 1);
 																		interFile.insertRecord(newTuple.getTupleByteArray());
 																		newTupleFlag=false;
+																		if(newTuple.getIntFld(attrCount)==numberOfTables)
+																			count++;
 																	}
 																	}
 																}
@@ -1005,7 +1118,7 @@ public class TopRankJoin extends Iterator {
 												expr[0].operand2.integer = key;
 												expr[0].next = null;
 												expr[1] = null;
-												interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0], false);
+												interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0]+1, false);
 												RID tempRID;
 												
 												while((t = interScan.get_next())!=null){
@@ -1014,6 +1127,9 @@ public class TopRankJoin extends Iterator {
 													updateTuple(tuple, t, i, tupleOffset,1);
 													t.setIntFld(attrCount, t.getIntFld(attrCount)+1);
 													interFile.updateRecord(tempRID, t);
+													addKeyToRelations(key, i);
+													if(t.getIntFld(attrCount)==numberOfTables)
+														count++;
 													
 												}
 												
@@ -1036,7 +1152,9 @@ public class TopRankJoin extends Iterator {
 								
 								newTuple.setIntFld(joinColumns[0]+1, key);
 								newTuple.setIntFld(attrCount, 1);
-								interFile.insertRecord(newTuple.getTupleByteArray());
+								RID insertRid=interFile.insertRecord(newTuple.getTupleByteArray());
+								System.out.println("inserted rid: "+insertRid.slotNo+" Page No: "+insertRid.pageNo.pid);
+								if(newTuple.getIntFld(attrCount)==numberOfTables)
 								count++;
 							}
 							break;
@@ -1070,6 +1188,7 @@ public class TopRankJoin extends Iterator {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
+			Tuple finalTuple = new Tuple();
 			for(java.util.Iterator<Integer> it = keySet.iterator(); it.hasNext(); ){
 				Integer visitKey = it.next();
 
@@ -1087,22 +1206,41 @@ public class TopRankJoin extends Iterator {
 				Tuple mainTuple = new Tuple();
 				mainTuple.setHdr((short)attrCount, interAttr, strSizes);
 				RID newRid = new RID();
-				Tuple finalTuple = new Tuple();
+				
 				//Get all tuples obtained in the sorted phase
 				
 				FileScan fs = new FileScan("InterTuple.in", interAttr, strSizes, (short)attrCount, attrCount, tProjection, null);
-				/*Tuple tup = new Tuple();
+				System.out.println("-----------File Data finalTuple----------");
+				Tuple test = fs.get_next();
+				System.out.println("t1: "+test.getIntFld(1));
+				System.out.println("t2: "+test.getStrFld(2));
+				System.out.println("t3: "+test.getFloFld(3));
+				System.out.println("t4: "+test.getIntFld(4));
+				System.out.println("t5: "+test.getStrFld(5));
+				System.out.println("t6: "+test.getIntFld(6));
+				System.out.println("t7: "+test.getFloFld(7));
+				System.out.println("t8: "+test.getIntFld(8));
+				System.out.println("---------------------");
 				int i=1;
-				while((tup=fs.get_next())!=null){
-					System.out.println("i "+i+"   "+tup.getIntFld(1));
-					i++;
-				}*/
-				int i=1;
+				System.out.println("Key in main Function : " + visitKey);
+				RID prevRID = new RID();
 				while((mainTuple = interScan.get_next())!=null){
 					System.out.println("i "+i);
-					fileRid = outFile.insertRecord(finalTuple.getTupleByteArray());
-					//System.out.println("t9: "+mainTuple.getFloFld(9));
-					//System.out.println("t10: "+mainTuple.getIntFld(10));
+					RID currRID = interScan.getRID();
+					System.out.println("RID in inner loop: " + prevRID.slotNo);
+					if(currRID.pageNo.pid==prevRID.pageNo.pid && currRID.slotNo==prevRID.slotNo)
+						continue;
+					System.out.println("After if condition : " + prevRID.slotNo);
+					prevRID.pageNo.pid = currRID.pageNo.pid;
+					prevRID.slotNo = currRID.slotNo;
+					System.out.println("t1: "+mainTuple.getIntFld(1));
+					System.out.println("t2: "+mainTuple.getStrFld(2));
+					System.out.println("t3: "+mainTuple.getFloFld(3));
+					System.out.println("t4: "+mainTuple.getIntFld(4));
+					System.out.println("t5: "+mainTuple.getStrFld(5));
+					System.out.println("t6: "+mainTuple.getIntFld(6));
+					System.out.println("t7: "+mainTuple.getFloFld(7));
+					System.out.println("t8: "+mainTuple.getIntFld(8));
 					System.out.println("int count: "+mainTuple.getIntFld(attrCount));
 					if(mainTuple.getIntFld(attrCount)!=numberOfTables){
 						for(int relNumber=0;relNumber<numberOfTables;relNumber++){
@@ -1118,7 +1256,7 @@ public class TopRankJoin extends Iterator {
 								randomExpr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[relNumber]+1);
 								randomExpr[0].operand2.integer = visitKey;
 								randomExpr[0].next = null;
-								expr[1] = null;
+								randomExpr[1] = null;
 
 								int attrLength = inputRelations[relNumber].length;
 								//create projectionList for Index Scan
@@ -1127,14 +1265,34 @@ public class TopRankJoin extends Iterator {
 									Sprojection[attr]= new FldSpec(new RelSpec(RelSpec.outer), attr+1);
 								}
 								//Index Scan
-								IndexScan randomScan = new IndexScan(new IndexType(IndexType.B_Index), indexFileNames[relNumber], "BTreeIndex", inputRelations[relNumber], stringSizes[relNumber], attrLength, attrLength, Sprojection, randomExpr, joinColumns[relNumber], false);
+								String fileName = "";
+								if(relNumber==0)
+									fileName ="R1.in";
+								else if(relNumber==1){
+									fileName = "R2.in";
+								
+								}
+								/*Tuple t1 = new Tuple();
+								FileScan sc = new FileScan("R2.in", inputRelations[relNumber], stringSizes[relNumber], (short)inputRelations[relNumber].length,inputRelations[relNumber].length, Sprojection, null);
+								while((t1 = sc.get_next())!=null){
+									System.out.println("dhd: "+ t1.getIntFld(1));
+								}
+								*/
+								//interScan = new IndexScan(new IndexType(IndexType.B_Index), "InterTuple.in", "BTreeIndex", interAttr, strSizes, attrCount, attrCount, tProjection, expr, joinColumns[0]+1, false);
+								System.out.println("index: "+ joinColumns[relNumber]);
+								/*IndexScan randomScan = new IndexScan(new IndexType(IndexType.B_Index), fileName, "BTreeIndex", inputRelations[relNumber], stringSizes[relNumber], attrLength, attrLength, Sprojection, randomExpr, joinColumns[relNumber]+1, false);
 								Tuple randomTuple = new Tuple();
-								randomTuple.setHdr((short)(inputRelations[relNumber].length), inputRelations[relNumber], stringSizes[relNumber]);
+								randomTuple.setHdr((short)(inputRelations[relNumber].length), inputRelations[relNumber], stringSizes[relNumber]);*/
+								IndexScan testScan = null;
+								testScan = new IndexScan(new IndexType(IndexType.B_Index), "R2.in", "BTreeIndex3", inputRelations[relNumber], stringSizes[relNumber], inputRelations[relNumber].length, inputRelations[relNumber].length, Sprojection, randomExpr, joinColumns[relNumber]+1, false);
+								Tuple randomTuple = new Tuple();
+								randomTuple.setHdr((short)inputRelations[relNumber].length, inputRelations[relNumber], stringSizes[relNumber]);
 								//For all tuples in the relations missing
 								//Check if new tuple should be created
-								while((randomTuple=randomScan.get_next())!=null){
+								while((randomTuple=testScan.get_next())!=null){
 									//Copy tuple contents into the tuple and write to index file
 									//Write into tuple and completely writeTuple
+									if(validTuple(randomTuple, relNumber)){
 									int tupleOffset = getTupleOffset(relNumber);
 									CondExpr[] condExpr = getConditionExp(relNumber);
 									for(int exprIndex=0;exprIndex<condExpr.length;exprIndex++){
@@ -1175,11 +1333,13 @@ public class TopRankJoin extends Iterator {
 													}
 												}
 											else if(fSpec2.relation.key==relNumber){
+												System.out.println("relation Number: "+fSpec1.relation.key);
 												int keyOffset = getTupleOffset(fSpec1.relation.key);
 												int conditionalOffset = keyOffset+fSpec1.offset;
-												if(randomTuple.getIntFld(keyOffset)==visitKey){
+												System.out.println("Key Offset: "+keyOffset);
+														if(randomTuple.getIntFld(keyOffset+1)==visitKey){
 													boolean evalCondition = true;
-														switch((inputRelations[fSpec2.relation.key][fSpec2.offset]).attrType){
+														switch((inputRelations[fSpec2.relation.key][fSpec2.offset-1]).attrType){
 														case AttrType.attrInteger:
 															evalCondition = evaluateCondition(randomTuple.getIntFld(fSpec2.offset),mainTuple.getIntFld(conditionalOffset),(inputRelations[fSpec2.relation.key][fSpec2.offset]),conObject.op );
 															//Condition evaluates to true so update the tuple
@@ -1197,7 +1357,7 @@ public class TopRankJoin extends Iterator {
 															}
 															break;
 														case AttrType.attrString:
-															evalCondition = evaluateCondition(randomTuple.getStrFld(fSpec2.offset),mainTuple.getStrFld(conditionalOffset),(inputRelations[fSpec2.relation.key][fSpec2.offset]),conObject.op);
+															evalCondition = evaluateCondition(randomTuple.getStrFld(fSpec2.offset),mainTuple.getStrFld(conditionalOffset),(inputRelations[fSpec2.relation.key][fSpec2.offset-1]),conObject.op);
 															//Condition evaluates to true so update the tuple
 															if(evalCondition){
 																updateTuple(randomTuple, mainTuple, relNumber, tupleOffset, 1);
@@ -1209,11 +1369,14 @@ public class TopRankJoin extends Iterator {
 												} //end of fSpec2 if
 											} //operand check
 										} //end of condition Expression for loop
+									}
 									} //random Scan while
 								} //tupleExists if
 							} //relations check for loop
 						} //total relations in a tuple check
 					/** TO BE MODIFIED -- Update Count**/
+					
+					if(mainTuple.getIntFld(attrCount)==numberOfTables){
 					Tuple outTuple = new Tuple();
 					AttrType[] Restypes = new AttrType[numOutputFlds];
 					short[] t_size= TupleUtils.setup_op_tuple(outTuple, Restypes, inputRelations, lengths,
@@ -1234,15 +1397,15 @@ public class TopRankJoin extends Iterator {
 						switch(interAttr[projOffset-1].attrType){
 						case AttrType.attrInteger:
 							finalTuple.setIntFld(projIndex+1, mainTuple.getIntFld(projOffset));
-							//System.out.println("finalTuple 1: "+finalTuple.getIntFld(projIndex+1));
+							System.out.println("finalTuple 1: "+finalTuple.getIntFld(projIndex+1));
 							break;
 						case AttrType.attrReal:
 							finalTuple.setFloFld(projIndex+1, mainTuple.getFloFld(projOffset));
-							//System.out.println("finalTuple 2: "+finalTuple.getFloFld(projIndex+1));
+							System.out.println("finalTuple 2: "+finalTuple.getFloFld(projIndex+1));
 							break;
 						case AttrType.attrString:
 							finalTuple.setStrFld(projIndex+1, mainTuple.getStrFld(projOffset));
-							//System.out.println("finalTuple 3: "+finalTuple.getStrFld(projIndex+1));
+							System.out.println("finalTuple 3: "+finalTuple.getStrFld(projIndex+1));
 							break;
 						}
 					}
@@ -1251,14 +1414,16 @@ public class TopRankJoin extends Iterator {
 						score+= mainTuple.getFloFld(inputRelations[scoreIndex].length+getTupleOffset(scoreIndex));
 					}
 					finalTuple.setFloFld(proj_list.length+1, score/numberOfTables);
-					//fileRid = outFile.insertRecord(finalTuple.getTupleByteArray());
+					fileRid = outFile.insertRecord(finalTuple.getTupleByteArray());
 					/** TO BE MODIFIED - Check the count and throw error if does not exist **/
 					//Now do projection and write results to a new heap file
+					}
 				}
 				
-				get_topK("TopRankJoin.in", finalTuple);
-				interScan.close();
-			}				
+				
+			}	
+			get_topK("TopRankJoin.in", finalTuple);
+			interScan.close();
 		}// end of try
 		catch (Exception e) {
 			e.printStackTrace();
@@ -1358,7 +1523,7 @@ public class TopRankJoin extends Iterator {
 			e.printStackTrace();
 		}
 		Tuple tuple1;
-		int topK = 10;
+		int topK = knumberOfTuples;
 		while (topK > 0) {
 			try {
 				if ((tuple1 = topIterator.get_next()) != null) {
@@ -1578,7 +1743,7 @@ public class TopRankJoin extends Iterator {
 			offset++;
 		}*/
 		int attrLength = inputRelations[tableIndex].length;
-		System.out.println("offset: "+ offset);
+		//System.out.println("offset: "+ offset);
 		for(int tField=1;tField<=attrLength;tField++){
 			switch(inputRelations[tableIndex][tField-1].attrType){
 			case AttrType.attrInteger:
@@ -1640,7 +1805,8 @@ public class TopRankJoin extends Iterator {
 
 
 	private void addKeyToRelations(int key, int tableIndex){
-		for (int index = 0; index < relationsVisited.get(key).size(); index++) {
+		int keyArraySize = relationsVisited.get(key).size();
+		for (int index = 0; index < keyArraySize; index++) {
 			// Add new Relation to the HashMap
 			ArrayList<Integer> rel = relationsVisited.get(key).get(index);
 			rel.add(tableIndex);

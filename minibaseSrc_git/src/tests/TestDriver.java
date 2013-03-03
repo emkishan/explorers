@@ -14,6 +14,7 @@ import heap.Heapfile;
 import heap.InvalidSlotNumberException;
 import heap.InvalidTupleSizeException;
 import heap.InvalidTypeException;
+import heap.Scan;
 import heap.SpaceNotAvailableException;
 import heap.Tuple;
 import index.IndexException;
@@ -38,6 +39,8 @@ import iterator.UnknownKeyTypeException;
 import java.io.*;
 import java.util.Vector;
 
+import btree.BTreeFile;
+import btree.IntegerKey;
 import bufmgr.PageNotReadException;
 
 
@@ -119,15 +122,18 @@ public class TestDriver {
 	  R1.addElement(new R1(3, "def", (float) 0.5));
 	  R1.addElement(new R1(4, "ghi", (float) 0.45));
 	  
-	  R2.addElement(new R2(1, "Bob Holloway", 12,  (float) 0.2));
+	  R2.addElement(new R2(1, "Bob Holloway", 13,  (float) 0.2));
 	  R2.addElement(new R2(2, "abc", 16, (float) 0.4));
 	  R2.addElement(new R2(3, "def", 19, (float) 0.5));
-	  R2.addElement(new R2(4, "bmw", 29, (float) 0.47));
+	  R2.addElement(new R2(3, "def", 20, (float) 0.55));
+	  R2.addElement(new R2(4, "bmw", 9, (float) 0.47));
 	  
 	  int numberR1 = 4;
 	  int numberR2 = 4;
 	  Tuple t = new Tuple();
 	  Tuple t1 = new Tuple();
+	  Tuple tt = new Tuple();
+	  Tuple t2 = new Tuple();
 	  short[] strSizes = new short[1];
 	  strSizes[0] = 25;
 	  AttrType[][] attrTypeList = new AttrType[2][];
@@ -143,7 +149,9 @@ public class TestDriver {
 	    attrTypeList[1][3] = new AttrType(AttrType.attrReal);
 	  try {
 		t.setHdr((short)3, attrTypeList[0], strSizes);
+		tt.setHdr((short)3, attrTypeList[0], strSizes);
 		t1.setHdr((short)4, attrTypeList[1], strSizes);
+		t2.setHdr((short)4, attrTypeList[1], strSizes);
 	} catch (InvalidTypeException e1) {
 		// TODO Auto-generated catch block
 		e1.printStackTrace();
@@ -316,6 +324,120 @@ public class TestDriver {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		boolean newTupleFlag=true;
+		 BTreeFile btf1 = null;
+		    try {
+		      btf1 = new BTreeFile("BTreeIndex2", AttrType.attrInteger, 4, 1); 
+		    }
+		    catch (Exception e) {
+		      //status = FAIL;
+		      e.printStackTrace();
+		      Runtime.getRuntime().exit(1);
+		    }
+		    Scan scan = null;
+		    
+		    try {
+		      scan = new Scan(f);
+	}
+   catch (Exception e) {
+     //status = FAIL;
+     e.printStackTrace();
+     Runtime.getRuntime().exit(1);
+   }
+		    RID scanRid = new RID();
+		    int tupleKey =0;
+		    Tuple temp = null;
+		    
+		    try {
+		      temp = scan.getNext(scanRid);
+		    }
+		    catch (Exception e) {
+		      e.printStackTrace();
+		    }
+		    while ( temp != null) {
+		      tt.tupleCopy(temp);
+		      
+		      try {
+		    	  tupleKey = tt.getIntFld(1);
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+		      
+		      try {
+			btf1.insert(new IntegerKey(tupleKey), scanRid); 
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+
+		      try {
+			temp = scan.getNext(scanRid);
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+		    }
+		    scan.closescan();
+		    
+		    
+		    // Btree for second file
+		    
+		    BTreeFile btf2 = null;
+		    try {
+		      btf2 = new BTreeFile("BTreeIndex3", AttrType.attrInteger, 4, 1); 
+		    }
+		    catch (Exception e) {
+		      //status = FAIL;
+		      e.printStackTrace();
+		      Runtime.getRuntime().exit(1);
+		    }
+		    Scan scan1 = null;
+		    
+		    try {
+		      scan1 = new Scan(f1);
+	}
+   catch (Exception e) {
+     //status = FAIL;
+     e.printStackTrace();
+     Runtime.getRuntime().exit(1);
+   }	
+		    RID scanRid1 = new RID();
+		    int tupleKey1 =0;
+		    Tuple temp1 = null;
+		    
+		    try {
+		      temp1 = scan1.getNext(scanRid1);
+		    }
+		    catch (Exception e) {
+		      e.printStackTrace();
+		    }
+		    while ( temp1 != null) {
+		      t2.tupleCopy(temp1);
+		      
+		      try {
+		    	  tupleKey1 = t2.getIntFld(1);
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+		      
+		      try {
+			btf2.insert(new IntegerKey(tupleKey1), scanRid1); 
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+
+		      try {
+			temp1 = scan1.getNext(scanRid1);
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+		    }
+		    scan1.closescan();
 		iteratorList[0] = topIterator;
 		iteratorList[1] = topIterator1;
 		Tuple tuple1 = new Tuple();
@@ -562,20 +684,21 @@ public static void main(String args[]){
     int memory = 10;
     CondExpr[] condExprList = new CondExpr[1];
     condExprList[0] = new CondExpr();
-    condExprList[0].op   = new AttrOperator(AttrOperator.aopGT);
+    condExprList[0].op   = new AttrOperator(AttrOperator.aopEQ);
     condExprList[0].next = null;
     condExprList[0].type1 = new AttrType(AttrType.attrSymbol);
-    condExprList[0].type2 = new AttrType(AttrType.attrString);
-    condExprList[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.innerRel),3);
-    condExprList[0].operand2.integer=5;
+    condExprList[0].type2 = new AttrType(AttrType.attrSymbol);
+    condExprList[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.outer),2);
+    condExprList[0].operand2.symbol = new FldSpec(new RelSpec(RelSpec.innerRel),2);
     
     FldSpec[] projList = {
     	       new FldSpec(new RelSpec(RelSpec.outer), 2),
     	       new FldSpec(new RelSpec(RelSpec.innerRel), 2),
-    	       new FldSpec(new RelSpec(RelSpec.innerRel), 3)
+    	       new FldSpec(new RelSpec(RelSpec.innerRel), 3),
+    	       new FldSpec(new RelSpec(RelSpec.outer), 1),
     	    };
-    int projlistIndex = 3;
-    int topK= 4;
+    int projlistIndex = 4;
+    int topK= 3;
     
     try {
 		TopRankJoin trj = new TopRankJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 

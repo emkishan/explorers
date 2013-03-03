@@ -65,8 +65,6 @@ public class IndexScan extends Iterator {
     Jtuple = new Tuple();
     
     try {
-    	System.out.println("noOutFlds: "+noOutFlds);
-    	System.out.println("str sizes: "+str_sizes);
     	
       ts_sizes = TupleUtils.setup_op_tuple(Jtuple, Jtypes, types, noInFlds, str_sizes, outFlds, noOutFlds);
     }
