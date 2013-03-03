@@ -597,6 +597,9 @@ class IndexDriver extends TestDriver
 
     try {
       t.setHdr((short) 4, attrType, attrSize);
+      System.out.println("Int" + t.getIntFld(3));
+      System.out.println("Real" +t.getFloFld(4));
+      System.out.println("String" + t.getStrFld(2));
     }
     catch (Exception e) {
       System.err.println("*** error in Tuple.setHdr() ***");

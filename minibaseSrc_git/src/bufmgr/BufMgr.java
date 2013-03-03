@@ -331,6 +331,24 @@ public class BufMgr implements GlobalConst{
   /** The replacer object, which is only used in this class. */
   private Replacer replacer;
   
+  /** Counter to read the number of page accesses */
+  private int pageAccessCount;
+  
+  /**
+   * Increment page count
+   */
+  
+  public void incrementPageCount(){
+	  pageAccessCount++;
+  }
+  
+  /**
+   * Get page count
+   */
+  
+  public int getPageAccessCount(){
+	  return pageAccessCount;
+  }
   
   /** Factor out the common code for the two versions of Flush 
    *
@@ -415,6 +433,7 @@ public class BufMgr implements GlobalConst{
       frmeTable = new FrameDesc[numBuffers];
       bufPool = new byte[numBuffers][MAX_SPACE];
       frmeTable = new FrameDesc[numBuffers];
+      pageAccessCount = 0;
       
       for (int i=0; i<numBuffers; i++)  // initialize frameTable
 	frmeTable[i] = new FrameDesc();
@@ -816,6 +835,7 @@ public class BufMgr implements GlobalConst{
     throws BufMgrException {
     
     try {
+    	PCounter.increment();
       SystemDefs.JavabaseDB.write_page(pageno, page);
     }
     catch (Exception e) {
@@ -828,7 +848,8 @@ public class BufMgr implements GlobalConst{
     throws BufMgrException {
     
     try {
-      SystemDefs.JavabaseDB.read_page(pageno, page);
+PCounter.increment();
+SystemDefs.JavabaseDB.read_page(pageno, page);
     }
     catch (Exception e) {
       throw new BufMgrException(e,"BufMgr.java: read_page() failed");
@@ -839,7 +860,7 @@ public class BufMgr implements GlobalConst{
   private void allocate_page (PageId pageno, int num)
     throws BufMgrException {
     
-    try {
+    try {   	
       SystemDefs.JavabaseDB.allocate_page(pageno, num);
     }
     catch (Exception e) {

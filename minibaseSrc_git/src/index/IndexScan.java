@@ -142,7 +142,7 @@ public class IndexScan extends Iterator {
 	   UnknownKeyTypeException,
 	   IOException
   {
-    RID rid;
+    //RID rid;
     int unused;
     KeyDataEntry nextentry = null;
 
@@ -257,13 +257,14 @@ public class IndexScan extends Iterator {
   
   
   //Modified for Top Rank Join
-  
-  public Tuple get_next(RID rid) 
+ /* 
+ public Tuple get_next() 
 		    throws IndexException, 
 			   UnknownKeyTypeException,
 			   IOException
 		  {
 		    //RID rid;
+	
 		    int unused;
 		    KeyDataEntry nextentry = null;
 
@@ -331,6 +332,8 @@ public class IndexScan extends Iterator {
 		      
 		      // not index_only, need to return the whole tuple
 		      rid = ((LeafData)nextentry.data).getData();
+		      System.out.println("RID Page Num: " + rid.pageNo.pid );
+		      System.out.println("RID Slot Num: " + rid.slotNo );
 		      try {
 			tuple1 = f.getRecord(rid);
 		      }
@@ -361,7 +364,8 @@ public class IndexScan extends Iterator {
 			catch (Exception e) {
 			  throw new IndexException(e, "IndexScan.java: Heapfile error");
 			}
-
+			 System.out.println("RID Page Num: " + rid.pageNo.pid );
+		      System.out.println("RID Slot Num: " + rid.slotNo );
 			return Jtuple;
 		      }
 
@@ -374,7 +378,11 @@ public class IndexScan extends Iterator {
 		    }
 		    
 		    return null; 
-		  }
+		  }*/
+  public RID getRID(){
+	  System.out.println("RID values" + rid.pageNo.pid);
+	  return rid;
+  }
   /**
    * Cleaning up the index scan, does not remove either the original
    * relation or the index from the database.
@@ -410,7 +418,8 @@ public class IndexScan extends Iterator {
   private Tuple         Jtuple;
   private int           t1_size;
   private int           _fldNum;       
-  private boolean       index_only;    
+  private boolean       index_only;   
+  private RID rid;
 
 }
 

@@ -109,21 +109,23 @@ public class TestDriver {
    */
 
   protected TestDriver (String nameRoot) {
-	    dbpath = "F:\\jyothi.minibase-db"; 
-	    logpath = "F:\\jyothi.minibase-log"; 
+	    dbpath = "\\tmp\\kishan.minibase.db"; 
+	    logpath = "\\tmp\\kishan.minibase.log"; 
 	  R1  = new Vector();
 	  R2  = new Vector();
 	  
-	  R1.addElement(new R1(1, "Bob Holloway", 0.2f));
-	  R1.addElement(new R1(2, "abc", 0.4f));
-	  R1.addElement(new R1(3, "def", 0.5f));
+	  R1.addElement(new R1(1, "Bob Holloway", (float) 0.2));
+	  R1.addElement(new R1(2, "abc", (float) 0.4));
+	  R1.addElement(new R1(3, "def", (float) 0.5));
+	  R1.addElement(new R1(4, "ghi", (float) 0.45));
 	  
-	  R2.addElement(new R2(1, "Bob Holloway", 12,  0.2f));
-	  R2.addElement(new R2(2, "abc", 16, 0.4f));
-	  R2.addElement(new R2(3, "def", 19, 0.5f));
+	  R2.addElement(new R2(1, "Bob Holloway", 12,  (float) 0.2));
+	  R2.addElement(new R2(2, "abc", 16, (float) 0.4));
+	  R2.addElement(new R2(3, "def", 19, (float) 0.5));
+	  R2.addElement(new R2(4, "bmw", 29, (float) 0.47));
 	  
-	  int numberR1 = 3;
-	  int numberR2 = 3;
+	  int numberR1 = 4;
+	  int numberR2 = 4;
 	  Tuple t = new Tuple();
 	  Tuple t1 = new Tuple();
 	  short[] strSizes = new short[1];
@@ -141,7 +143,7 @@ public class TestDriver {
 	    attrTypeList[1][3] = new AttrType(AttrType.attrReal);
 	  try {
 		t.setHdr((short)3, attrTypeList[0], strSizes);
-		t1.setHdr((short)3, attrTypeList[1], strSizes);
+		t1.setHdr((short)4, attrTypeList[1], strSizes);
 	} catch (InvalidTypeException e1) {
 		// TODO Auto-generated catch block
 		e1.printStackTrace();
@@ -167,9 +169,12 @@ public class TestDriver {
 	    }
 	  for(int i=0;i<numberR1;i++){
 		  try {
-			t.setFloFld(1, ((R1)R1.elementAt(i)).sid);
-			t.setStrFld(1, ((R1)R1.elementAt(i)).sname);
-			t.setFloFld(1, ((R1)R1.elementAt(i)).score);
+			t.setIntFld(1, ((R1)R1.elementAt(i)).sid);
+			t.setStrFld(2, ((R1)R1.elementAt(i)).sname);
+			t.setFloFld(3, ((R1)R1.elementAt(i)).score);
+			t.setScore(((R1)R1.elementAt(i)).score);
+			
+			System.out.println(t.getFloFld(3));
 			try {
 				rid=f.insertRecord(t.getTupleByteArray());
 			} catch (InvalidSlotNumberException e) {
@@ -203,11 +208,18 @@ public class TestDriver {
 	  for(int i=0;i<numberR2;i++){
 		  try {
 			t1.setIntFld(1, ((R2)R2.elementAt(i)).sid);
-			t1.setStrFld(1, ((R2)R2.elementAt(i)).sname);
-			t1.setIntFld(1, ((R2)R2.elementAt(i)).age);
-			t1.setFloFld(1, ((R2)R2.elementAt(i)).score);
+			t1.setStrFld(2, ((R2)R2.elementAt(i)).sname);
+			t1.setIntFld(3, ((R2)R2.elementAt(i)).age);
+			t1.setFloFld(4, ((R2)R2.elementAt(i)).score);
+			t1.setScore(((R2)R2.elementAt(i)).score);
+			
+			System.out.println(t1.getIntFld(1));
+			System.out.println(t1.getStrFld(2));
+			System.out.println(t1.getIntFld(3));
+			System.out.println(t1.getFloFld(4));
+			System.out.println(t1.getScore());
 			try {
-				rid=f1.insertRecord(t.getTupleByteArray());
+				rid=f1.insertRecord(t1.getTupleByteArray());
 			} catch (InvalidSlotNumberException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -319,7 +331,7 @@ public class TestDriver {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-			try {
+			/*try {
 				while ((tuple1 = topIterator.get_next()) != null) {
 					tuple1.print(tuple1.attr_Types);
 				}
@@ -362,7 +374,7 @@ public class TestDriver {
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}
+			}*/
   //  sprintf( dbpath, MINIBASE_DB, nameRoot, getpid() );
   //  sprintf( logpath, MINIBASE_LOG, nameRoot, getpid() );
 
@@ -563,7 +575,7 @@ public static void main(String args[]){
     	       new FldSpec(new RelSpec(RelSpec.innerRel), 3)
     	    };
     int projlistIndex = 3;
-    int topK= 2;
+    int topK= 4;
     
     try {
 		TopRankJoin trj = new TopRankJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 

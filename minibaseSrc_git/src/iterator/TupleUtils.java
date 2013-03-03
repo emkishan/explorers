@@ -418,10 +418,11 @@ public class TupleUtils {
 		short[][] sizesT1 = new short[nOutFlds][nOutFlds];
 		for(int i=0;i<len_in.length;i++){
 			int len = len_in[i];
-			sizesT1 = new short[len][len];
+			sizesT1[i] = new short[len];
 		}
 		int i, count = 0;
 		for (i = 0,count=0; i < in.length; i++){
+			count=0;
 			for(int j=0;j<in[i].length;j++){
 				if(in[i][j].attrType == AttrType.attrString){
 					sizesT1[i][j]= t1_str_sizes[i][count++];
