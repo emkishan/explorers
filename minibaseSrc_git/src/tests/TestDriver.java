@@ -93,6 +93,34 @@ class R2 {
 	    score = _score;
 	  }
 	}
+
+class R3 {
+	  public int    sid;
+	  public String sname;
+	  public int age;
+	  public float score;
+	  
+	  public R3 (int _sid, String _sname, int _age,float _score) {
+	    sid    = _sid;
+	    sname  = _sname;
+	    age = _age;
+	    score = _score;
+	  }
+	}
+
+class R4 {
+	  public int    sid;
+	  public String sname;
+	  public int age;
+	  public float score;
+	  
+	  public R4 (int _sid, String _sname, int _age,float _score) {
+	    sid    = _sid;
+	    sname  = _sname;
+	    age = _age;
+	    score = _score;
+	  }
+	}
 public class TestDriver {
 
   public final static boolean OK   = true; 
@@ -103,8 +131,11 @@ public class TestDriver {
   
   private Vector R1;
   private Vector R2;
+  private Vector R3;
+  private Vector R4;
+  SystemDefs sysdef;
   
-  Iterator[] iteratorList = new Iterator[2];
+  Iterator[] iteratorList = new Iterator[4];
   /** 
    * TestDriver Constructor 
    *
@@ -116,27 +147,62 @@ public class TestDriver {
 	    logpath = "\\tmp\\kishan.minibase.log"; 
 	  R1  = new Vector();
 	  R2  = new Vector();
+	  R3 = new Vector();
+	  R4 = new Vector();
 	  
 	  R1.addElement(new R1(1, "Bob Holloway", (float) 0.2));
 	  R1.addElement(new R1(2, "abc", (float) 0.4));
 	  R1.addElement(new R1(3, "def", (float) 0.5));
 	  R1.addElement(new R1(4, "ghi", (float) 0.45));
+/*	  R1.addElement(new R1(5, "Bob Holloway", (float) 0.2));
+	  R1.addElement(new R1(6, "abc", (float) 0.4));
+	  R1.addElement(new R1(7, "def", (float) 0.5));
+	  R1.addElement(new R1(8, "ghi", (float) 0.45));*/
+
 	  
 	  R2.addElement(new R2(1, "Bob Holloway", 13,  (float) 0.2));
 	  R2.addElement(new R2(2, "abc", 16, (float) 0.4));
 	  R2.addElement(new R2(3, "def", 19, (float) 0.5));
 	  R2.addElement(new R2(3, "def", 20, (float) 0.55));
 	  R2.addElement(new R2(4, "bmw", 9, (float) 0.47));
+/*	  R2.addElement(new R2(5, "Bob Holloway", 13,  (float) 0.2));
+	  R2.addElement(new R2(6, "abc", 16, (float) 0.4));
+	  R2.addElement(new R2(7, "def", 19, (float) 0.5));
+	  R2.addElement(new R2(8, "def", 20, (float) 0.55));
+	  R2.addElement(new R2(8, "bmw", 9, (float) 0.47));*/
+	  
+	  R3.addElement(new R3(1, "Bob Holloway", 13,  (float) 0.2));
+	  R3.addElement(new R3(2, "abc", 16, (float) 0.4));
+	  R3.addElement(new R3(3, "def", 19, (float) 0.6));
+	 // R2.addElement(new R2(3, "def", 20, (float) 0.55));
+	  R3.addElement(new R3(4, "bmw", 9, (float) 0.57));
+/*	  R3.addElement(new R3(5, "Bob Holloway", 13,  (float) 0.2));
+	  R3.addElement(new R3(6, "abc", 16, (float) 0.4));
+	  R3.addElement(new R3(7, "def", 19, (float) 0.6));
+	 // R2.addElement(new R2(3, "def", 20, (float) 0.55));
+	  R3.addElement(new R3(8, "bmw", 9, (float) 0.57));*/
+	  
+	  
+	  R4.addElement(new R4(1, "Bob Holloway", 13,  (float) 0.2));
+	  R4.addElement(new R4(2, "abc", 16, (float) 0.4));
+	  R4.addElement(new R4(3, "def", 19, (float) 0.6));
+	 //R2.addElement(new R2(3, "def", 20, (float) 0.55));
+	  R4.addElement(new R4(4, "bmw", 9, (float) 0.57));
 	  
 	  int numberR1 = 4;
 	  int numberR2 = 4;
+	  int numberR3 = 4;
+	  int numberR4 = 4;
 	  Tuple t = new Tuple();
 	  Tuple t1 = new Tuple();
 	  Tuple tt = new Tuple();
 	  Tuple t2 = new Tuple();
+	  Tuple t3 = new Tuple();
+	  Tuple t4 = new Tuple();
+	  Tuple t5 = new Tuple();
 	  short[] strSizes = new short[1];
 	  strSizes[0] = 25;
-	  AttrType[][] attrTypeList = new AttrType[2][];
+	  AttrType[][] attrTypeList = new AttrType[4][];
 	  	attrTypeList[0] = new AttrType[3];
 	    attrTypeList[0][0] = new AttrType(AttrType.attrInteger);
 	    attrTypeList[0][1] = new AttrType(AttrType.attrString);
@@ -147,11 +213,26 @@ public class TestDriver {
 	    attrTypeList[1][1] = new AttrType(AttrType.attrString);
 	    attrTypeList[1][2] = new AttrType(AttrType.attrInteger);
 	    attrTypeList[1][3] = new AttrType(AttrType.attrReal);
+	    
+	    attrTypeList[2] = new AttrType[4];
+	    attrTypeList[2][0] = new AttrType(AttrType.attrInteger);
+	    attrTypeList[2][1] = new AttrType(AttrType.attrString);
+	    attrTypeList[2][2] = new AttrType(AttrType.attrInteger);
+	    attrTypeList[2][3] = new AttrType(AttrType.attrReal);
+	    
+	    attrTypeList[3] = new AttrType[4];
+	    attrTypeList[3][0] = new AttrType(AttrType.attrInteger);
+	    attrTypeList[3][1] = new AttrType(AttrType.attrString);
+	    attrTypeList[3][2] = new AttrType(AttrType.attrInteger);
+	    attrTypeList[3][3] = new AttrType(AttrType.attrReal);
 	  try {
 		t.setHdr((short)3, attrTypeList[0], strSizes);
 		tt.setHdr((short)3, attrTypeList[0], strSizes);
 		t1.setHdr((short)4, attrTypeList[1], strSizes);
 		t2.setHdr((short)4, attrTypeList[1], strSizes);
+		t3.setHdr((short)4, attrTypeList[2], strSizes);
+		t4.setHdr((short)4, attrTypeList[2], strSizes);
+		t5.setHdr((short)4, attrTypeList[3], strSizes);
 	} catch (InvalidTypeException e1) {
 		// TODO Auto-generated catch block
 		e1.printStackTrace();
@@ -162,13 +243,17 @@ public class TestDriver {
 		// TODO Auto-generated catch block
 		e1.printStackTrace();
 	}
-	  SystemDefs sysdef = new SystemDefs( dbpath, 1000, GlobalConst.NUMBUF, "Clock" );
+	  sysdef = new SystemDefs( dbpath, 1000, GlobalConst.NUMBUF, "Clock" );
 	  RID             rid;
 	    Heapfile        f = null;
 	    Heapfile        f1 = null;
+	    Heapfile f2 = null;
+	    Heapfile f3 = null;
 	    try {
 	      f = new Heapfile("R1.in");
 	      f1 = new Heapfile("R2.in");
+	      f2 = new Heapfile("R3.in");
+	      f3 = new Heapfile("R4.in");
 	    }
 	    catch (Exception e) {
 	      System.err.println("*** error in Heapfile constructor ***");
@@ -182,7 +267,7 @@ public class TestDriver {
 			t.setFloFld(3, ((R1)R1.elementAt(i)).score);
 			t.setScore(((R1)R1.elementAt(i)).score);
 			
-			System.out.println(t.getFloFld(3));
+			
 			try {
 				rid=f.insertRecord(t.getTupleByteArray());
 			} catch (InvalidSlotNumberException e) {
@@ -221,13 +306,84 @@ public class TestDriver {
 			t1.setFloFld(4, ((R2)R2.elementAt(i)).score);
 			t1.setScore(((R2)R2.elementAt(i)).score);
 			
-			System.out.println(t1.getIntFld(1));
-			System.out.println(t1.getStrFld(2));
-			System.out.println(t1.getIntFld(3));
-			System.out.println(t1.getFloFld(4));
-			System.out.println(t1.getScore());
 			try {
 				rid=f1.insertRecord(t1.getTupleByteArray());
+			} catch (InvalidSlotNumberException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidTupleSizeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (SpaceNotAvailableException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (HFException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (HFBufMgrException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (HFDiskMgrException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} catch (FieldNumberOutOfBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	  }
+	  
+	  for(int i=0;i<numberR3;i++){
+		  try {
+			t3.setIntFld(1, ((R3)R3.elementAt(i)).sid);
+			t3.setStrFld(2, ((R3)R3.elementAt(i)).sname);
+			t3.setIntFld(3, ((R3)R3.elementAt(i)).age);
+			t3.setFloFld(4, ((R3)R3.elementAt(i)).score);
+			t3.setScore(((R3)R3.elementAt(i)).score);
+			
+			try {
+				rid=f2.insertRecord(t3.getTupleByteArray());
+			} catch (InvalidSlotNumberException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvalidTupleSizeException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (SpaceNotAvailableException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (HFException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (HFBufMgrException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (HFDiskMgrException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} catch (FieldNumberOutOfBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	  }
+	  
+	  for(int i=0;i<numberR4;i++){
+		  try {
+			t5.setIntFld(1, ((R4)R4.elementAt(i)).sid);
+			t5.setStrFld(2, ((R4)R4.elementAt(i)).sname);
+			t5.setIntFld(3, ((R4)R4.elementAt(i)).age);
+			t5.setFloFld(4, ((R4)R4.elementAt(i)).score);
+			t5.setScore(((R4)R4.elementAt(i)).score);
+			
+			try {
+				rid=f3.insertRecord(t5.getTupleByteArray());
 			} catch (InvalidSlotNumberException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -264,8 +420,21 @@ public class TestDriver {
 			  new FldSpec(new RelSpec(RelSpec.outer), 3),
 			  new FldSpec(new RelSpec(RelSpec.outer), 4)};
 	  
+	  
+	  FldSpec[] tProjection2 = {new FldSpec(new RelSpec(RelSpec.outer), 1),
+			  new FldSpec(new RelSpec(RelSpec.outer), 2),
+			  new FldSpec(new RelSpec(RelSpec.outer), 3),
+			  new FldSpec(new RelSpec(RelSpec.outer), 4)};
+	  
+	  FldSpec[] tProjection3 = {new FldSpec(new RelSpec(RelSpec.outer), 1),
+			  new FldSpec(new RelSpec(RelSpec.outer), 2),
+			  new FldSpec(new RelSpec(RelSpec.outer), 3),
+			  new FldSpec(new RelSpec(RelSpec.outer), 4)};
+	  
 	  FileScan fm1 = null;
 	  FileScan fm2 = null;
+	  FileScan fm3 = null;
+	  FileScan fm4 = null;
 	
 			try {
 				fm1 = new FileScan("R1.in", attrTypeList[0], strSizes,
@@ -317,6 +486,66 @@ public class TestDriver {
 		Iterator topIterator1 = null;
 		try {
 			topIterator1 = new Sort(attrTypeList[1], (short)attrTypeList[1].length, strSizes,fm2, 4, descending, 4, 5 );
+		} catch (SortException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		try {
+			fm3 = new FileScan("R3.in", attrTypeList[1], strSizes,
+					(short)4, 4,
+					tProjection1, null);
+		} catch (FileScanException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (TupleUtilsException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (InvalidRelation e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		Iterator topIterator2 = null;
+		try {
+			topIterator2 = new Sort(attrTypeList[2], (short)attrTypeList[2].length, strSizes,fm3, 4, descending, 4, 5 );
+		} catch (SortException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		try {
+			fm4 = new FileScan("R4.in", attrTypeList[1], strSizes,
+					(short)4, 4,
+					tProjection1, null);
+		} catch (FileScanException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (TupleUtilsException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (InvalidRelation e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		Iterator topIterator3 = null;
+		try {
+			topIterator3 = new Sort(attrTypeList[2], (short)attrTypeList[2].length, strSizes,fm4, 4, descending, 4, 5 );
 		} catch (SortException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -438,8 +667,122 @@ public class TestDriver {
 		      }
 		    }
 		    scan1.closescan();
+		    
+		    
+		    BTreeFile btf3 = null;
+		    try {
+		      btf3 = new BTreeFile("BTreeIndex4", AttrType.attrInteger, 4, 1); 
+		    }
+		    catch (Exception e) {
+		      //status = FAIL;
+		      e.printStackTrace();
+		      Runtime.getRuntime().exit(1);
+		    }
+		    Scan scan2 = null;
+		    
+		    try {
+		      scan2 = new Scan(f2);
+	}
+   catch (Exception e) {
+     //status = FAIL;
+     e.printStackTrace();
+     Runtime.getRuntime().exit(1);
+   }
+		    RID scanRid2 = new RID();
+		    int tupleKey2 =0;
+		    Tuple temp2 = null;
+		    
+		    try {
+		      temp2 = scan2.getNext(scanRid2);
+		    }
+		    catch (Exception e) {
+		      e.printStackTrace();
+		    }
+		    while ( temp2 != null) {
+		      t4.tupleCopy(temp2);
+		      
+		      try {
+		    	  tupleKey2 = t4.getIntFld(1);
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+		      
+		      try {
+			btf3.insert(new IntegerKey(tupleKey2), scanRid2); 
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+
+		      try {
+			temp2 = scan2.getNext(scanRid2);
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+		    }
+		    scan2.closescan();
+		    
+		    BTreeFile btf4 = null;
+		    try {
+		      btf4 = new BTreeFile("BTreeIndex5", AttrType.attrInteger, 4, 1); 
+		    }
+		    catch (Exception e) {
+		      //status = FAIL;
+		      e.printStackTrace();
+		      Runtime.getRuntime().exit(1);
+		    }
+		    Scan scan3 = null;
+		    
+		    try {
+		      scan3 = new Scan(f3);
+	}
+   catch (Exception e) {
+     //status = FAIL;
+     e.printStackTrace();
+     Runtime.getRuntime().exit(1);
+   }
+		    RID scanRid3 = new RID();
+		    int tupleKey3 =0;
+		    Tuple temp3 = null;
+		    
+		    try {
+		      temp3 = scan3.getNext(scanRid3);
+		    }
+		    catch (Exception e) {
+		      e.printStackTrace();
+		    }
+		    while ( temp3 != null) {
+		      t5.tupleCopy(temp3);
+		      
+		      try {
+		    	  tupleKey3 = t5.getIntFld(1);
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+		      
+		      try {
+			btf4.insert(new IntegerKey(tupleKey3), scanRid3); 
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+
+		      try {
+			temp3 = scan3.getNext(scanRid3);
+		      }
+		      catch (Exception e) {
+			e.printStackTrace();
+		      }
+		    }
+		    scan3.closescan();
+		    
 		iteratorList[0] = topIterator;
 		iteratorList[1] = topIterator1;
+		iteratorList[2] = topIterator2;
+		iteratorList[3] = topIterator3;
 		Tuple tuple1 = new Tuple();
 		try {
 			tuple1.setHdr((short)3, attrTypeList[0], strSizes);
@@ -647,8 +990,8 @@ public static void main(String args[]){
 
     //Running test1() to test6()
     if (!test1()) { _passAll = FAIL; }
-    int numOfTables = 2;
-    AttrType[][] attrTypeList = new AttrType[2][];
+    int numOfTables = 4;
+    AttrType[][] attrTypeList = new AttrType[4][];
     attrTypeList[0] = new AttrType[3];
     attrTypeList[0][0] = new AttrType(AttrType.attrInteger);
     attrTypeList[0][1] = new AttrType(AttrType.attrString);
@@ -660,49 +1003,104 @@ public static void main(String args[]){
     attrTypeList[1][2] = new AttrType(AttrType.attrInteger);
     attrTypeList[1][3] = new AttrType(AttrType.attrReal);
     
-    int[] numOfColsList = new int[2];
+    attrTypeList[2] = new AttrType[4];
+    attrTypeList[2][0] = new AttrType(AttrType.attrInteger);
+    attrTypeList[2][1] = new AttrType(AttrType.attrString);
+    attrTypeList[2][2] = new AttrType(AttrType.attrInteger);
+    attrTypeList[2][3] = new AttrType(AttrType.attrReal);
+    
+    attrTypeList[3] = new AttrType[4];
+    attrTypeList[3][0] = new AttrType(AttrType.attrInteger);
+    attrTypeList[3][1] = new AttrType(AttrType.attrString);
+    attrTypeList[3][2] = new AttrType(AttrType.attrInteger);
+    attrTypeList[3][3] = new AttrType(AttrType.attrReal);
+    
+    int[] numOfColsList = new int[4];
     numOfColsList[0] = attrTypeList[0].length;
     numOfColsList[1] = attrTypeList[1].length;
+    numOfColsList[2] = attrTypeList[2].length;
+    numOfColsList[3] = attrTypeList[3].length;
     
-    short[][] stringSizesList = new short[2][];
+    short[][] stringSizesList = new short[4][];
     stringSizesList[0] = new short[1];
     stringSizesList[1] = new short[1];
+    stringSizesList[2] = new short[1];
+    stringSizesList[3] = new short[1];
 
     stringSizesList[0][0] = 25;
     stringSizesList[1][0] = 25;
+    stringSizesList[2][0] = 25;
+    stringSizesList[3][0] = 25;
     
-    int[] joinedColList = new int[2];
+    int[] joinedColList = new int[4];
     joinedColList[0]=0;
     joinedColList[1]=0;
+    joinedColList[2]=0;
+    joinedColList[3]=0;
     
    
-    IndexType[] b_index = new IndexType[2];
+    IndexType[] b_index = new IndexType[4];
     b_index[0] = new IndexType(IndexType.B_Index);
     b_index[1] = new IndexType(IndexType.B_Index);
+    b_index[2] = new IndexType(IndexType.B_Index);
+    b_index[3] = new IndexType(IndexType.B_Index);
     
-    String[] indexNameList = new String[2];
+    String[] indexNameList = new String[4];
+    indexNameList[0] = "BTreeIndex2";
+    indexNameList[1] = "BTreeIndex3";
+    indexNameList[2] = "BTreeIndex4";
+    indexNameList[3] = "BTreeIndex5";
+    
     int memory = 10;
-    CondExpr[] condExprList = new CondExpr[1];
+    CondExpr[] condExprList = new CondExpr[2];
     condExprList[0] = new CondExpr();
-    condExprList[0].op   = new AttrOperator(AttrOperator.aopEQ);
+    condExprList[0].op   = new AttrOperator(AttrOperator.aopGT);
     condExprList[0].next = null;
     condExprList[0].type1 = new AttrType(AttrType.attrSymbol);
     condExprList[0].type2 = new AttrType(AttrType.attrSymbol);
-    condExprList[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.outer),2);
-    condExprList[0].operand2.symbol = new FldSpec(new RelSpec(RelSpec.innerRel),2);
+    condExprList[0].operand1.symbol = new FldSpec (new RelSpec(RelSpec.outer),1);
+    condExprList[0].operand2.symbol = new FldSpec(new RelSpec(RelSpec.innerRel),3);
+    
+    condExprList[1] = new CondExpr();
+    condExprList[1].op   = new AttrOperator(AttrOperator.aopGT);
+    condExprList[1].next = null;
+    condExprList[1].type1 = new AttrType(AttrType.attrSymbol);
+    condExprList[1].type2 = new AttrType(AttrType.attrInteger);
+    condExprList[1].operand1.symbol = new FldSpec (new RelSpec(RelSpec.innerRel),3);
+    //condExprList[1].operand2.symbol = new FldSpec(new RelSpec(RelSpec.innerRel),3);
+    condExprList[1].operand2.integer = 12;
     
     FldSpec[] projList = {
     	       new FldSpec(new RelSpec(RelSpec.outer), 2),
     	       new FldSpec(new RelSpec(RelSpec.innerRel), 2),
     	       new FldSpec(new RelSpec(RelSpec.innerRel), 3),
     	       new FldSpec(new RelSpec(RelSpec.outer), 1),
+    	       new FldSpec(new RelSpec(2), 2),
+    	       new FldSpec(new RelSpec(2), 3),
+    	       new FldSpec(new RelSpec(3), 2),
+    	       new FldSpec(new RelSpec(3), 3),
     	    };
-    int projlistIndex = 4;
-    int topK= 3;
+    int projlistIndex = 8;
+    int topK= 2;
+    
+    String[] fileNames = new String[4];
+    fileNames[0] = "R1.in";
+    fileNames[1] = "R2.in";
+    fileNames[2] = "R3.in";
+    fileNames[3] = "R4.in";
     
     try {
+    	long startTime = System.currentTimeMillis();
+    	System.out.println("Before " + sysdef.JavabaseBM.getPageAccessCount());
 		TopRankJoin trj = new TopRankJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 
-joinedColList, iteratorList, b_index, indexNameList, memory, condExprList, projList, projlistIndex, topK, 1 );
+joinedColList, iteratorList, b_index, indexNameList, memory, condExprList, projList, projlistIndex, topK, 1 , fileNames);
+		System.out.println("After " + sysdef.JavabaseBM.getPageAccessCount());
+		long endTime = System.currentTimeMillis();
+		System.out.println("Total Time = " + (endTime-startTime));
+		for(int k=0;k<4;k++)
+			System.out.println("Probed " + trj.num_probed(k));
+		for(int k=0;k<4;k++)
+			System.out.println("Scanned " + trj.num_scanned(k));
 	} catch (TopRankJoinException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();

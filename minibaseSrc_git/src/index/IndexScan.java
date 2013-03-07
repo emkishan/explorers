@@ -378,7 +378,7 @@ public class IndexScan extends Iterator {
 		    return null; 
 		  }*/
   public RID getRID(){
-	  System.out.println("RID values" + rid.pageNo.pid);
+	  //System.out.println("RID values" + rid.pageNo.pid);
 	  return rid;
   }
   /**

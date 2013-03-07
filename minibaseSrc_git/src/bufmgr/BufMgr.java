@@ -835,7 +835,7 @@ public class BufMgr implements GlobalConst{
     throws BufMgrException {
     
     try {
-    	PCounter.increment();
+    	incrementPageCount();
       SystemDefs.JavabaseDB.write_page(pageno, page);
     }
     catch (Exception e) {
@@ -848,7 +848,7 @@ public class BufMgr implements GlobalConst{
     throws BufMgrException {
     
     try {
-PCounter.increment();
+incrementPageCount();
 SystemDefs.JavabaseDB.read_page(pageno, page);
     }
     catch (Exception e) {

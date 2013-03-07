@@ -402,7 +402,7 @@ public class TopSortMerge extends Iterator implements GlobalConst {
 				}
 			}
 			if (PredEval.Eval(OutputFilter, TempTuple1, TempTuple2, _in1, _in2) == true) {
-				Projection.Join(TempTuple1, _in1, TempTuple2, _in2, Jtuple,
+				Projection.TopJoin(TempTuple1, _in1,0, TempTuple2, _in2,0, Jtuple,
 						perm_mat, nOutFlds);
 				writeTuple();
 				/*try {
