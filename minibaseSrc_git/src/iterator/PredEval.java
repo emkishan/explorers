@@ -42,7 +42,11 @@ public class PredEval
       AttrType  comparison_type = new AttrType(AttrType.attrInteger);
       int       comp_res;
       boolean   op_res = false, row_res = false, col_res = true;
-      
+/*      System.out.println("Inside Eval Expr");
+      t1.print(t1.attr_Types);
+      System.out.println("Second one");
+      t2.print(t2.attr_Types);
+      System.out.println("Finished Eval Expr");*/
       if (p == null)
 	{
 	  return true;

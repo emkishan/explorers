@@ -144,7 +144,7 @@ public class PhaseIITest implements GlobalConst{
 					
 					AttrType [] Stypes = new AttrType[numOfColms];
 					int col=0;
-					int numOfStringCol =1;
+					int numOfStringCol =0;
 					while(col<numOfColms){
 						System.out.println("Enter the datatype of column["+(col+1)+"]\n 0-> String\n 1-> Integer\n 2->Real");
 						int attrType = scanner.nextInt();
@@ -207,10 +207,11 @@ public class PhaseIITest implements GlobalConst{
 					}
 		       		       
 					RID rid = null;
-					while ((res = parser.splitLine()) != null)
+					res = parser.splitLine();
+					while ( res != null && res.length!=0)
 					{
 						int i;
-						for (i = 0; i < res.length-1; i++)
+						for (i = 0; i < numOfColms; i++)
 						{
 							//System.out.println("Token Found [" + res[i] + "]");
 							AttrType attr= Stypes[i];
@@ -228,13 +229,13 @@ public class PhaseIITest implements GlobalConst{
 														   							
 						}
 						
-						if(i==res.length-1){
+						if(i==numOfColms){
 							//System.out.println("Score =" + res[i]);
 							t.setScore(Float.parseFloat(res[i]));
 						}
 						//t.print(Stypes);
 						rid = topFile.insertRecord(t.getTupleByteArray());
-				
+						res = parser.splitLine();
 					}
 					excelDocumentStream.close();
 					
@@ -542,7 +543,7 @@ public class PhaseIITest implements GlobalConst{
 		
 		condExprList[condExprList.length-1] = null;
 		
-		System.out.println("Enter total memory(<=10)");
+		System.out.println("Enter total memory");
 		int memory = scanner.nextInt();
 		
 		System.out.println("Enter the number of top K tuples required in the resulting relation");
@@ -583,11 +584,23 @@ public class PhaseIITest implements GlobalConst{
 				case AttrType.attrReal: jjSize=4;
 					break;
 			}
-			sort_names = new Sort(JJtype, (short) projlistIndex, stringSizesList[0],(iterator.Iterator) nlj, 1, ascending, jjSize, memory);
+			
+			int numOfProjStringCol=0;
+			for(int l=0; l<projlistIndex ; l++){
+				if(JJtype[l].attrType==AttrType.attrString)
+					numOfProjStringCol++;				
+			}
+			short [] stringSizesProjList = new short [numOfProjStringCol];
+			for(int e=0;e<numOfProjStringCol;e++)
+				stringSizesProjList[e] = 30; 
+						
+			sort_names = new Sort(JJtype, (short) projlistIndex, stringSizesProjList,(iterator.Iterator) nlj, 1, ascending, jjSize, memory);
 			
 		} catch (Exception e) {
+			//System.out.println("Test2");
 			System.err.println("*** Error preparing for nested_loop_join");
 			System.err.println("" + e);
+			e.printStackTrace();
 			Runtime.getRuntime().exit(1);
 		}
 		
@@ -667,8 +680,7 @@ public class PhaseIITest implements GlobalConst{
 			//ArrayList colNameList = new ArrayList();
 			//scanner.nextLine();
 			
-			FldSpec[] projList = null;
-			ArrayList<FldSpec> list = new ArrayList<FldSpec>();
+			FldSpec[] projList = new FldSpec[20];
 		    
 		    FileScan [] amList = new FileScan[numOfTables];
 		    //projlist[1] = new FldSpec(rel, 2);
@@ -771,12 +783,13 @@ public class PhaseIITest implements GlobalConst{
 					}
 		       		       
 					RID rid = null;
-					while ((res = parser.splitLine()) != null)
+					res = parser.splitLine();
+					while (res != null && res.length!=0)
 					{
 						int i;
-						for (i = 0; i < res.length-1; i++)
+						for (i = 0; i < numOfColms; i++)
 						{
-							//System.out.println("Token Found [" + res[i] + "]");
+							System.out.println("Token Found [" + res[i] + "]");
 							AttrType attr= Stypes[i];
 							int type = attr.attrType;
 							//System.out.println("type = "+type);
@@ -795,7 +808,7 @@ public class PhaseIITest implements GlobalConst{
 							//System.out.println("t.data = "+t.data);
 															   							
 						}
-						if(i==res.length-1){
+						if(i==numOfColms){
 							//System.out.println("Score =" + res[i]);
 							t.setScore(Float.parseFloat(res[i]));
 						}
@@ -803,7 +816,7 @@ public class PhaseIITest implements GlobalConst{
 						//t.print(Stypes);
 						rid = topFile.insertRecord(t.getTupleByteArray());
 						//t.print(Stypes);
-				
+						res = parser.splitLine();
 					}
 					excelDocumentStream.close();
 					
@@ -1079,14 +1092,14 @@ public class PhaseIITest implements GlobalConst{
 	    		Runtime.getRuntime().exit(1);
 	    	}
 	    	
-	    	QueryCheck qcheck1 = new QueryCheck(1);
+	    	//QueryCheck qcheck1 = new QueryCheck(1);
 	    	Tuple t = null;
 	    	 
 	        try {
 	          while ((t = sm.get_next()) != null) {
 	            //t.print(jtype);
 	            
-	            qcheck1.Check(t);
+	            //qcheck1.Check(t);
 	          }
 	          sm.get_topK();
 	        }
@@ -1101,7 +1114,7 @@ public class PhaseIITest implements GlobalConst{
 	          Runtime.getRuntime().exit(1);
 	        }
 	        
-	        qcheck1.report(1);
+	        //qcheck1.report(1);
 	        try {
 	          sm.close();
 	        }
@@ -1196,7 +1209,7 @@ public class PhaseIITest implements GlobalConst{
 					
 					AttrType [] Stypes = new AttrType[numOfColms];
 					int col=0;
-					int numOfStringCol =1;
+					int numOfStringCol =0;
 					while(col<numOfColms){
 						System.out.println("Enter the datatype of column["+(col+1)+"]\n 0-> String\n 1-> Integer\n 2->Real");
 						int attrType = scanner.nextInt();
@@ -1226,7 +1239,7 @@ public class PhaseIITest implements GlobalConst{
 					
 					short [] Ssizes = new short [numOfStringCol];
 					for(int e=0;e<numOfStringCol;e++)
-						Ssizes[e] = 30;  					
+						Ssizes[e] = 20;  					
 					stringSizesList[k] = Ssizes;
 					
 					try {
@@ -1239,12 +1252,13 @@ public class PhaseIITest implements GlobalConst{
 					}
 		       		       
 					RID rid = null;
-					while ((res = parser.splitLine()) != null)
+					res = parser.splitLine();
+					while (res !=null && res.length!=0)
 					{
 						int i;
-						for (i = 0; i < res.length-1; i++)
+						for (i = 0; i < Stypes.length-1; i++)
 						{
-							//System.out.println("Token Found [" + res[i] + "]");
+							//System.out.println("Token Found [new folder" + res[i] + "]");
 							AttrType attr= Stypes[i];
 							int type = attr.attrType;
 							//System.out.println("type = "+type);
@@ -1261,14 +1275,14 @@ public class PhaseIITest implements GlobalConst{
 							
 						}
 						
-						if(i==res.length-1){
+						if(i==Stypes.length-1){
 							//System.out.println("Score =" + res[i]);
 							t.setScore(Float.parseFloat(res[i]));
 							t.setFloFld(i+1, Float.parseFloat(res[i]));
 						}
 						//t.print(Stypes);
 						rid = topFile.insertRecord(t.getTupleByteArray());
-				
+						res = parser.splitLine();
 					}
 					excelDocumentStream.close();
 		       
@@ -1634,6 +1648,14 @@ itr = new Sort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j
 		}	
 			TopRankJoin trj = new TopRankJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 
 					joinedColList, iteratorList, b_index, indexNameList, memory, condExprList, newProjList, projlistIndex, topK, 1 , fileNames);
+			for(int i=0;i<numOfTables;i++)
+			{
+				System.out.println("Scanned : " + trj.num_scanned(i));
+			}
+			for(int i=0;i<numOfTables;i++)
+			{
+				System.out.println("Probed : " + trj.num_probed(i));
+			}
 							
 		}catch(Exception e){
 			
@@ -1666,19 +1688,43 @@ itr = new Sort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j
 		
 			switch(option){
 			
-				case 1: System.out.println("Before getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount()); 
+				case 1: long readCount = jjoin.sysdef.JavabaseBM.getReadCount();
+				long writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
+				long allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
 						processTopNestedLoopJoin();
-						System.out.println("After getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-						//System.out.println("Time taken to process: " + totalTime);
+						//System.out.println("Pages read : " + (jjoin.sysdef.JavabaseBM.getReadCount() - readCount));
+						//System.out.println("Pages write : " + (jjoin.sysdef.JavabaseBM.getWriteCount() - writeCount));
+						//System.out.println("Pages allocated : " + (jjoin.sysdef.JavabaseBM.getAllocateCount() - allocateCount));
 					break;
 			
-				case 2:	System.out.println("Before getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
+				case 2:	//System.out.println("Before getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
+					readCount = jjoin.sysdef.JavabaseBM.getReadCount();
+					writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
+					allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
 						long totalTime = processTopSortMerge();
-						System.out.println("After getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-						System.out.println("Time taken to process: " + totalTime);
+						/*System.out.println("Pages read : " + (jjoin.sysdef.JavabaseBM.getReadCount() - readCount));
+						System.out.println("Pages write : " + (jjoin.sysdef.JavabaseBM.getWriteCount() - writeCount));
+						System.out.println("Pages allocated : " + (jjoin.sysdef.JavabaseBM.getAllocateCount() - allocateCount));
+						//stem.out.println("After getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
+						System.out.println("Time taken to process: " + totalTime);*/
 					break;
 			
-				case 3: processTopRankJoin();
+				case 3: 
+					//System.out.println("Before getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
+					readCount = jjoin.sysdef.JavabaseBM.getReadCount();
+					writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
+					allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
+					long before = System.currentTimeMillis();
+					processTopRankJoin();
+					//System.out.println("After getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
+					readCount = jjoin.sysdef.JavabaseBM.getReadCount();
+					writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
+					allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
+					/*System.out.println("Pages read : " + (readCount));
+					System.out.println("Pages write : " + (writeCount));
+					System.out.println("Pages allocated : " + (allocateCount));
+					*/long after = System.currentTimeMillis();
+					System.out.println("Time Taken" + (after-before)/1000 + " secs");
 					break;
 				case 0:
 					System.out.println("Goodbye");

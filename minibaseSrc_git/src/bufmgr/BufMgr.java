@@ -332,22 +332,40 @@ public class BufMgr implements GlobalConst{
   private Replacer replacer;
   
   /** Counter to read the number of page accesses */
-  private int pageAccessCount;
+  private int readCount;
+  private int writeCount;
+  private int allocateCount;
   
   /**
    * Increment page count
    */
   
-  public void incrementPageCount(){
-	  pageAccessCount++;
+  public void incrementReadCount(){
+	  readCount++;
+  }
+  
+  public void incrementWriteCount(){
+	  writeCount++;
+  }
+  
+  public void incrementAllocateCount(){
+	  allocateCount++;
   }
   
   /**
    * Get page count
    */
   
-  public int getPageAccessCount(){
-	  return pageAccessCount;
+  public int getReadCount(){
+	  return readCount;
+  }
+  
+  public int getWriteCount(){
+	  return readCount;
+  }
+  
+  public int getAllocateCount(){
+	  return readCount;
   }
   
   /** Factor out the common code for the two versions of Flush 
@@ -433,7 +451,9 @@ public class BufMgr implements GlobalConst{
       frmeTable = new FrameDesc[numBuffers];
       bufPool = new byte[numBuffers][MAX_SPACE];
       frmeTable = new FrameDesc[numBuffers];
-      pageAccessCount = 0;
+      readCount = 0;
+      writeCount = 0;
+      allocateCount =0;
       
       for (int i=0; i<numBuffers; i++)  // initialize frameTable
 	frmeTable[i] = new FrameDesc();
@@ -835,7 +855,7 @@ public class BufMgr implements GlobalConst{
     throws BufMgrException {
     
     try {
-    	incrementPageCount();
+    	incrementWriteCount();
       SystemDefs.JavabaseDB.write_page(pageno, page);
     }
     catch (Exception e) {
@@ -848,7 +868,7 @@ public class BufMgr implements GlobalConst{
     throws BufMgrException {
     
     try {
-incrementPageCount();
+incrementReadCount();
 SystemDefs.JavabaseDB.read_page(pageno, page);
     }
     catch (Exception e) {
@@ -861,6 +881,7 @@ SystemDefs.JavabaseDB.read_page(pageno, page);
     throws BufMgrException {
     
     try {   	
+    	incrementAllocateCount();
       SystemDefs.JavabaseDB.allocate_page(pageno, num);
     }
     catch (Exception e) {

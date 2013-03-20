@@ -95,12 +95,12 @@ public class TopNestedLoopsJoins  extends Iterator
 		
 	  topK = num;
 	  
-	  for(int i=0;i<in1.length;i++)
-    	  System.out.print(_in1[i]+"\t");
+	 /* for(int i=0;i<in1.length;i++)
+    	  System.out.print(_in1[i]+"\t");*/
       
       outer = am1;
       
-      System.out.println(outer.toString());
+     // System.out.println(outer.toString());
       
       t2_str_sizescopy =  t2_str_sizes;
       inner_tuple = new Tuple();
@@ -242,7 +242,7 @@ public class TopNestedLoopsJoins  extends Iterator
 		      if (PredEval.Eval(OutputFilter, outer_tuple, inner_tuple, _in1, _in2) == true)
 			{
 			  // Apply a projection on the outer and inner tuples.
-		      System.out.println("Outer Tuple Score before Join : " + outer_tuple.getScore());
+		     // System.out.println("Outer Tuple Score before Join : " + outer_tuple.getScore());
 			  //Projection.Join(outer_tuple, _in1,inner_tuple, _in2,Jtuple, perm_mat, nOutFlds);
 			  Projection.TopJoin(outer_tuple, _in1,0,inner_tuple, _in2,0,Jtuple, perm_mat, nOutFlds);
 			  writeTuple();
@@ -250,8 +250,8 @@ public class TopNestedLoopsJoins  extends Iterator
 			  /*for(int i=1;i<nOutFlds;i++){
 				  System.out.print("\t" + Jtuple.getStrFld(i));
 			  }*/
-			  System.out.print("\t" + Jtuple.getScore());
-			  System.out.println();
+			//  System.out.print("\t" + Jtuple.getScore());
+			  //System.out.println();
 			  return Jtuple;
 			  
 			}
@@ -333,7 +333,7 @@ return;
 		Iterator topIterator = null;
 		try {
 			//topIterator = new Sort(JtopTuple.attr_Types, (short)1, Jtuple.string_sizes, (iterator.Iterator) this,  1, descending, 4, 5);
-			topIterator = new Sort(JtopTuple.attr_Types, attrLength, Jtuple.string_sizes, fm1,  nOutFlds + 1, descending, 4, 5);			
+			topIterator = new Sort(JtopTuple.attr_Types, attrLength, Jtuple.string_sizes, fm1,  nOutFlds + 1, descending, 4, n_buf_pgs + 100);			
 			//topIterator = new Sort(JtopTuple.attr_Types, attrLength,Jtuple.string_sizes, fm1, nOutFlds + 1, descending, 4, 5);
 		} catch (SortException e) {
 			// TODO Auto-generated catch block

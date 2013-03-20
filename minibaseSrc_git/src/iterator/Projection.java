@@ -107,9 +107,9 @@ public class Projection
 	   IOException
     {
     
-     System.out.println("Number of Output fields in Jtuple" + nOutFlds); 
+     /*System.out.println("Number of Output fields in Jtuple" + nOutFlds); 
      System.out.println("First Tuple : " + t1.getStrFld(1));
-     System.out.println("Second Tuple : " + t2.getStrFld(3));
+     System.out.println("Second Tuple : " + t2.getStrFld(3));*/
       for (int i = 0; i < nOutFlds; i++)
 	{
     	  
@@ -154,8 +154,8 @@ public class Projection
 	      break;
 	    }
           }
-      System.out.println("Tuple 1 score" + t1.getScore());
-      System.out.println("Tuple 2 score" + t2.getScore());
+      //System.out.println("Tuple 1 score" + t1.getScore());
+      //System.out.println("Tuple 2 score" + t2.getScore());
       float finalScore = t1.getScore() + t2.getScore();
       Jtuple.setScore(finalScore/2);
       return;

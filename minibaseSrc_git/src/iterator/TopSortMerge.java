@@ -449,7 +449,7 @@ public class TopSortMerge extends Iterator implements GlobalConst {
 		Iterator topIterator = null;
 		try {
 			topIterator = new Sort(JtopTuple.attr_Types,attrLength,
-					Jtuple.string_sizes, fm1, nOutFlds + 1, descending, 4, 5);
+					Jtuple.string_sizes, fm1, nOutFlds + 1, descending, 4, _n_pages + 100);
 		} catch (SortException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
