@@ -1442,7 +1442,8 @@ public class PhaseIITest implements GlobalConst{
 			System.out.println("i ="+i);
 			for(int j=0;j<attr.length;j++){
 				System.out.println("attr type ="+attr[j].attrType);
-			}
+			}3
+		
 		}*/
 		
 		CondExpr [] condExprList = new CondExpr[numCondExpr+1];
