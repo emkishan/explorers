@@ -12,6 +12,7 @@ import heap.Heapfile;
 import heap.Scan;
 import heap.Tuple;
 import index.IndexScan;
+import iterator.AdvancedSort;
 import iterator.CondExpr;
 import iterator.DuplElim;
 import iterator.FileScan;
@@ -495,7 +496,7 @@ public class PhaseIIIDriver implements GlobalConst{
 					Sprojection[q] = new FldSpec(new RelSpec(RelSpec.outer), q+1);
 				}
 						
-				Iterator am = null;
+				FileScan am = null;
 				
 			    try {
 			      am  = new FileScan(tableNameList[j]+".in", attrTypeList[j], stringSizesList[j], 
@@ -522,7 +523,7 @@ public class PhaseIIIDriver implements GlobalConst{
 
 			 
 Iterator itr = null;
-itr = new Sort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j],am, numOfColsList[j], new TupleOrder(TupleOrder.Descending), 4, memory );
+itr = new AdvancedSort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j],am, numOfColsList[j], new TupleOrder(TupleOrder.Descending), 4, memory );
 			  	iteratorList[j] = itr;
 		}	
 			TopTAJoin trj = new TopTAJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 

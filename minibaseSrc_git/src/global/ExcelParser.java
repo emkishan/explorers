@@ -66,11 +66,11 @@ form of a String array.
 		{
 			int cellIndex = 0; 
 			int noOfCells =	row.getPhysicalNumberOfCells();
-			System.out.println("noOfCell ="+noOfCells);
+			//System.out.println("noOfCell ="+noOfCells);
 			String[] values = new String[noOfCells];        
 			short firstCellNum = row.getFirstCellNum();
 			short lastCellNum = row.getLastCellNum();
-			System.out.println("getRowNum ="+row.getRowNum());
+			//System.out.println("getRowNum ="+row.getRowNum());
 			if (firstCellNum >=0 && lastCellNum >=0) 
 			{
 				for(short iCurrent = firstCellNum; iCurrent <lastCellNum; iCurrent++) 

@@ -132,6 +132,9 @@ public class FileScan extends  Iterator
 	  return null;
 	}
 	
+	ConstantVars.setGlobalRID(rid);
+	//System.out.println("in the iterator of filescan: Page: " + rid.pageNo + " Slot: " + rid.slotNo);
+	
 	tuple1.setHdr(in1_len, _in1, s_sizes);
 	if (PredEval.Eval(OutputFilter, tuple1, null, _in1, null) == true){
 	  Projection.Project(tuple1, _in1,  Jtuple, perm_mat, nOutFlds); 
@@ -139,7 +142,36 @@ public class FileScan extends  Iterator
 	}        
       }
     }
-
+  
+  public Tuple get_next(RID rid)
+		    throws JoinsException,
+			   IOException,
+			   InvalidTupleSizeException,
+			   InvalidTypeException,
+			   PageNotReadException, 
+			   PredEvalException,
+			   UnknowAttrType,
+			   FieldNumberOutOfBoundException,
+			   WrongPermat
+		    {     
+		      //RID rid = new RID();;
+		      
+		      while(true) {
+			if((tuple1 =  scan.getNext(rid)) == null) {
+			  return null;
+			}
+			
+			ConstantVars.setGlobalRID(rid);
+			//System.out.println("in the iterator of filescan: Page: " + rid.pageNo + " Slot: " + rid.slotNo);
+			
+			tuple1.setHdr(in1_len, _in1, s_sizes);
+			if (PredEval.Eval(OutputFilter, tuple1, null, _in1, null) == true){
+			  Projection.Project(tuple1, _in1,  Jtuple, perm_mat, nOutFlds); 
+			  return  Jtuple;
+			}        
+		      }
+		    }
+  
   /**
    *implement the abstract method close() from super class Iterator
    *to finish cleaning up

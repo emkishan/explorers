@@ -210,6 +210,8 @@ public class IndexScan extends Iterator {
       rid = ((LeafData)nextentry.data).getData();
       try {
 	tuple1 = f.getRecord(rid);
+	//System.out.println("Index RID Page No : " + rid.pageNo + " Slot No: " + rid.slotNo);
+	ConstantVars.setGlobalRID(rid);
       }
       catch (Exception e) {
 	throw new IndexException(e, "IndexScan.java: getRecord failed");
