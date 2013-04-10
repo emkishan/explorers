@@ -19,6 +19,7 @@ import iterator.FldSpec;
 import iterator.Iterator;
 import iterator.RelSpec;
 import iterator.Sort;
+import iterator.TopFAJoin;
 import iterator.TopNestedLoopsJoins;
 import iterator.TopRankJoin;
 import iterator.TopSortMerge;
@@ -1207,7 +1208,7 @@ public class PhaseIITest implements GlobalConst{
 					//System.out.println("noOfColms ="+numOfColms);
 					numOfColsList[k] = numOfColms;
 					
-					AttrType [] Stypes = new AttrType[numOfColms];
+					AttrType [] Stypes = new AttrType[numOfColms+1];
 					int col=0;
 					int numOfStringCol =0;
 					while(col<numOfColms){
@@ -1234,16 +1235,16 @@ public class PhaseIITest implements GlobalConst{
 					
 					col++;
 					}
-					
+					Stypes[col] = new AttrType(AttrType.attrString);
 					attrTypeList[k] = Stypes;
 					
-					short [] Ssizes = new short [numOfStringCol];
-					for(int e=0;e<numOfStringCol;e++)
+					short [] Ssizes = new short [numOfStringCol+1];
+					for(int e=0;e<numOfStringCol+1;e++)
 						Ssizes[e] = 20;  					
 					stringSizesList[k] = Ssizes;
 					
 					try {
-						t.setHdr((short) numOfColms,Stypes, Ssizes);
+						t.setHdr((short) (numOfColms+1),Stypes, Ssizes);
 					}
 					catch (Exception e) {
 						System.err.println("*** error in Tuple.setHdr() ***");
@@ -1275,13 +1276,15 @@ public class PhaseIITest implements GlobalConst{
 							
 						}
 						
-						if(i==Stypes.length-1){
+						if(i==Stypes.length-2){
 							//System.out.println("Score =" + res[i]);
 							t.setScore(Float.parseFloat(res[i]));
 							t.setFloFld(i+1, Float.parseFloat(res[i]));
 						}
 						//t.print(Stypes);
 						rid = topFile.insertRecord(t.getTupleByteArray());
+						t.setStrFld(i+1, rid.pageNo.pid+"_"+rid.slotNo);
+						topFile.updateRecord(rid, t);
 						res = parser.splitLine();
 					}
 					excelDocumentStream.close();
@@ -1577,30 +1580,23 @@ public class PhaseIITest implements GlobalConst{
 			for(int j=0;j<numOfTables;j++){
 				
 				//Create attribute/column list for each table
-				FldSpec [] Sprojection = new FldSpec[numOfColsList[j]];
+				FldSpec [] Sprojection = new FldSpec[numOfColsList[j]+1];
+				//System.out.println("length: "+Sprojection.length);
 				for(int q=0;q<Sprojection.length;q++){
 				
 					Sprojection[q] = new FldSpec(new RelSpec(RelSpec.outer), q+1);
 				}
-						
 				Iterator am = null;
-				
 			    try {
 			      am  = new FileScan(tableNameList[j]+".in", attrTypeList[j], stringSizesList[j], 
-							  (short)numOfColsList[j], (short)numOfColsList[j],
+							  (short)(numOfColsList[j]+1), (short)(numOfColsList[j]+1),
 							  Sprojection, null);
-			      
-			      /*Tuple t1;
-					while((t1 =am.get_next())!=null){
-						t1.print(attrTypeList[k]);
-					}*/
-								      
 			    } 
 			    catch (Exception e) {
-				   status = false;
+				   //status = false;
+			    	e.printStackTrace();
 				   System.err.println (""+e);
 				 }
-
 				if (status != true) {
 				      //bail out
 				   System.err.println ("*** Error setting up scan for sailors");
@@ -1646,9 +1642,13 @@ public class PhaseIITest implements GlobalConst{
 Iterator itr = null;
 itr = new Sort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j],am, numOfColsList[j], new TupleOrder(TupleOrder.Descending), 4, memory );
 			  	iteratorList[j] = itr;
+			  	//Tuple  sortedTuple = itr.get_next();
+			  	//sortedTuple.print(attrTypeList[j]);
 		}	
-			TopRankJoin trj = new TopRankJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 
+			TopFAJoin trj = new TopFAJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 
 					joinedColList, iteratorList, b_index, indexNameList, memory, condExprList, newProjList, projlistIndex, topK, 1 , fileNames);
+			trj.createTopKTuples();
+			
 			for(int i=0;i<numOfTables;i++)
 			{
 				System.out.println("Scanned : " + trj.num_scanned(i));
@@ -1659,7 +1659,7 @@ itr = new Sort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j
 			}
 							
 		}catch(Exception e){
-			
+			e.printStackTrace();
 		}finally{
 			scanner.close();
 		}
