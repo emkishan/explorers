@@ -341,7 +341,7 @@ public class BufMgr implements GlobalConst{
    */
   
   public void incrementReadCount(){
-	  readCount++;
+	  ConstantVars.incrementReadCount();
   }
   
   public void incrementWriteCount(){
@@ -357,15 +357,15 @@ public class BufMgr implements GlobalConst{
    */
   
   public int getReadCount(){
-	  return readCount;
+	  return ConstantVars.getReadCount();
   }
   
   public int getWriteCount(){
-	  return readCount;
+	  return ConstantVars.getWriteCount();
   }
   
   public int getAllocateCount(){
-	  return readCount;
+	  return allocateCount;
   }
   
   /** Factor out the common code for the two versions of Flush 
@@ -855,7 +855,7 @@ public class BufMgr implements GlobalConst{
     throws BufMgrException {
     
     try {
-    	incrementWriteCount();
+    	ConstantVars.incrementWriteCount();
       SystemDefs.JavabaseDB.write_page(pageno, page);
     }
     catch (Exception e) {
@@ -868,7 +868,7 @@ public class BufMgr implements GlobalConst{
     throws BufMgrException {
     
     try {
-incrementReadCount();
+ConstantVars.incrementReadCount();
 SystemDefs.JavabaseDB.read_page(pageno, page);
     }
     catch (Exception e) {
@@ -881,7 +881,7 @@ SystemDefs.JavabaseDB.read_page(pageno, page);
     throws BufMgrException {
     
     try {   	
-    	incrementAllocateCount();
+    	
       SystemDefs.JavabaseDB.allocate_page(pageno, num);
     }
     catch (Exception e) {

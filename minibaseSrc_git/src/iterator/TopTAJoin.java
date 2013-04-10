@@ -48,7 +48,9 @@ public class TopTAJoin {
 	private Tuple combinedTuple = new Tuple();
 	private Tuple tupleCopy = new Tuple();
 	Tuple finalTuple = new Tuple();
-	private HashSet<Integer> readRIDs;
+	private HashSet<Integer> readRIDs,readIntKeys;
+	private HashSet<String> readStrKeys;
+	private short[] tempStringSizes;
 
 	//
 	public TopTAJoin (int numTables,
@@ -74,10 +76,12 @@ public class TopTAJoin {
 		outFile = null;
 		iterators = am;
 		duplFlag = duplicates;
-		tupleOffsets = new int[numTables];
+		tupleOffsets = new int[numTables+1];
 		minRID = new RID();
 		this.indexNames = new String[indexNames.length];
 		readRIDs = new HashSet<Integer>();
+		readStrKeys = new HashSet<String>();
+		readIntKeys = new HashSet<Integer>();
 
 		//Setting minimum to number of Relations as it is max possible value
 		threshold = numTables;
@@ -139,14 +143,16 @@ public class TopTAJoin {
 
 		int count = 0;
 		int prevRel = 0;
+		tupleOffsets[0]=0;
 		for(int i=0;i<proj_list.length;i++){
 			this.proj_list[i] = proj_list[i];
 			if(prevRel!=this.proj_list[i].relation.key){
-				tupleOffsets[prevRel] = count;
-				count = 0;
+				tupleOffsets[prevRel+1] = count;
 				prevRel = this.proj_list[i].relation.key;
 			}
+			count++;
 		}
+		tupleOffsets[prevRel+1] = this.proj_list.length;
 		}
 		catch(Exception e){
 			System.out.println("Exception in constructor");
@@ -181,7 +187,7 @@ public class TopTAJoin {
 				performOneIteration();
 				//System.out.println("Min: "+min);
 				//System.out.println("threshold: "+threshold);
-				if(min>=threshold)
+				if(min>=threshold && kResultsFile.getRecCnt()==knumberOfTuples)
 					break;
 			}
 			Scan finalScan = new Scan(kResultsFile);
@@ -191,10 +197,12 @@ public class TopTAJoin {
 			t = finalScan.getNext(rid);
 			System.out.println("Min: " + min);
 			System.out.println("Threshold " + threshold);
+			finalTuple.setHdr((short)attrTypes.length, attrTypes, tempStringSizes);
 			while(t!=null){
 				finalTuple.tupleCopy(t);
 				finalTuple.print(attrTypes);
 				System.out.print(finalTuple.getScore());
+				//t.print(t.attr_Types);
 				System.out.println();
 				t = finalScan.getNext(rid);
 			}
@@ -207,6 +215,8 @@ public class TopTAJoin {
 	
 	private boolean checkIfHighestOnesSatisfy(String key, AttrType attrType,int relNumber,Tuple mainTuple){
 		try{
+			if(duplFlag)
+				return false;
 			float minTemp = 0;
 			
 			attrTypes = new AttrType[proj_list.length];
@@ -216,13 +226,12 @@ public class TopTAJoin {
 				if(attrTypes[i].attrType==AttrType.attrString)
 					strCount++;
 			}
-			short[] tempStringSizes = new short[strCount];
+			tempStringSizes = new short[strCount];
 			for(int i=0;i<strCount;i++){
 				tempStringSizes[i]=30;
 			}
 			combinedTuple = new Tuple();
 			tupleCopy.setHdr((short)proj_list.length, attrTypes, tempStringSizes);
-			finalTuple.setHdr((short)proj_list.length, attrTypes, tempStringSizes);
 			combinedTuple.setHdr((short)proj_list.length, attrTypes, tempStringSizes);
 			for(int rel=0;rel<numberOfTables;rel++){
 				Tuple tempTuple=new Tuple();
@@ -248,6 +257,7 @@ public class TopTAJoin {
 					else{
 						expr[0].type2 = new AttrType(AttrType.attrString);
 						expr[0].operand2.string= key;
+						//System.out.println("String key : " + key);
 					}			
 					expr[0].next = null;
 					expr[1] = null;
@@ -257,6 +267,8 @@ public class TopTAJoin {
 						tempAttrTypes[index] = inputRelations[rel][index];
 						//System.out.println("Attribute Types : [" + index + "] " + tempAttrTypes[index]);
 					}
+					//System.out.println("Main Tuple : ");
+					//mainTuple.print(mainTuple.attr_Types);
 					/*System.out.println("index file Name: "+ indexFileNames[rel]);
 					System.out.println("index Names: "+ indexNames[rel]);
 					System.out.println("attrCount: "+ attrCount);*/
@@ -282,6 +294,7 @@ public class TopTAJoin {
 							counter++;
 						}	
 					}
+					tempIndex.closeFlag=true;
 					tempIndex.close();
 					//System.out.println("Size of file: " + tempHeapfile.getRecCnt());
 					FileScan tempScan = new FileScan("tempResults.in", inputRelations[rel], stringSizes[rel],(short) inputRelations[rel].length, inputRelations[rel].length, tProjection, null);
@@ -290,7 +303,7 @@ public class TopTAJoin {
 					t1.print(inputRelations[rel]);*/
 					Sort tempSortedFile = new Sort(inputRelations[rel], (short)inputRelations[rel].length, stringSizes[rel], tempScan, inputRelations[rel].length, new TupleOrder(TupleOrder.Descending), 4, 12);
 					//System.out.println("Highest Tuple retrieved is : ");
-					tempTuple = tempSortedFile.get_next();
+						tempTuple = tempSortedFile.get_next();
 					//tempTuple.print(inputRelations[rel]);
 					tempSortedFile.close();
 					tempHeapfile.deleteFile();
@@ -304,11 +317,11 @@ public class TopTAJoin {
 								break;
 							case AttrType.attrString:
 								//tempTuple.print(tempTuple.attr_Types);
-								System.out.println("Switch case : projIndex");
-								System.out.println("TempTuple : ");
-								tempTuple.print(tempTuple.attr_Types);
-								System.out.println("Combined Tuple : ");
-								combinedTuple.print(combinedTuple.attr_Types);
+								//System.out.println("Switch case : " + projIndex);
+								//System.out.println("TempTuple : ");
+								//tempTuple.print(tempTuple.attr_Types);
+								//System.out.println("Combined Tuple : ");
+								//combinedTuple.print(combinedTuple.attr_Types);
 								combinedTuple.setStrFld(projIndex+1, tempTuple.getStrFld(proj_list[projIndex].offset));
 								break;
 							case AttrType.attrReal:
@@ -342,7 +355,7 @@ public class TopTAJoin {
 			}
 			combinedTuple.setScore(combinedTuple.getScore()/numberOfTables);
 			//System.out.println("Final Score: " + combinedTuple.getScore());
-				insertAndUpdateMin(kResultsFile,combinedTuple);
+			insertAndUpdateMin(kResultsFile,combinedTuple);
 		
 			if(minTemp<min)
 				return false;
@@ -398,10 +411,12 @@ public class TopTAJoin {
 				tempTuple = fileScan.getNext(taRID);
 				recordCount++;
 			}
-			//System.out.println("Removing the following tuple with score : " + heapFile.getRecord(tempRID).getScore());
 			
-			if(heapFile.getRecCnt()==knumberOfTuples)
+			
+			if(heapFile.getRecCnt()==knumberOfTuples+1){
 				heapFile.deleteRecord(minRID);
+				//System.out.println("Removing the following tuple with score : " + min);
+			}
 			min=tempMin;
 			minRID.pageNo = tempRID.pageNo;
 			minRID.slotNo = tempRID.slotNo;
@@ -415,26 +430,34 @@ public class TopTAJoin {
 	
 	private void performRandomAccess(String key,AttrType keyType,int relNumber,Tuple mainTuple){
 		boolean firstOnesSatisfy = checkIfHighestOnesSatisfy(key,keyType,relNumber,mainTuple);
+		int counter = 0;
 		try{
-			if(firstOnesSatisfy && duplFlag){
-				Tuple combinedTuple = new Tuple();
-				attrTypes = new AttrType[proj_list.length];
+			if(duplFlag){
+				counter++;
+				//System.out.println("Record Count (" + counter +"):" + kResultsFile.getRecCnt());
+				//Tuple combinedTuple = new Tuple();
+				attrTypes = new AttrType[proj_list.length+1];
 				int strCount =0;
-				for(int i=0;i<attrTypes.length;i++){
-					attrTypes[i] = inputRelations[proj_list[i].relation.key][proj_list[i].offset];
+				for(int i=0;i<attrTypes.length-1;i++){
+					attrTypes[i] = inputRelations[proj_list[i].relation.key][proj_list[i].offset-1];
 					if(attrTypes[i].attrType==AttrType.attrString)
 						strCount++;
 				}
+				attrTypes[attrTypes.length-1]=new AttrType(AttrType.attrInteger);
 
-				short[] tempStringSizes = new short[strCount];
-				for(int i=0;i<stringSizes.length;i++)
+				tempStringSizes = new short[strCount];
+				for(int i=0;i<tempStringSizes.length;i++)
 					tempStringSizes[i]=30;
-
-				combinedTuple.setHdr((short)proj_list.length, attrTypes, tempStringSizes);
-
+				
+				combinedTuple = new Tuple();
+				combinedTuple.setHdr((short)(proj_list.length+1), attrTypes, tempStringSizes);
+				updateTuple(combinedTuple, mainTuple, relNumber);
+				combinedTuple.setScore(mainTuple.getScore());
+				combinedTuple.setIntFld(proj_list.length+1, 1);
+				
 				for(int i=0;i<numberOfTables;i++){
 					if(relNumber!=i){
-						checkForOthers(key,keyType,relNumber,combinedTuple);
+						checkForOthers(key,keyType,i,combinedTuple);
 						mainRelNum = relNumber;
 					}
 				}
@@ -448,12 +471,12 @@ public class TopTAJoin {
 	
 	private void checkForOthers(String key, AttrType keyType, int relNum, Tuple tuple){
 		try{
-			int attrCount = inputRelations[relNum+1].length;
+			int attrCount = inputRelations[relNum].length;
 			FldSpec[] tProjection = new FldSpec[attrCount];
 			for (int i = 0; i < attrCount; i++)
 				tProjection[i] = new FldSpec(new RelSpec(RelSpec.outer), i + 1);
 
-			CondExpr[] expr = new CondExpr[1];
+			CondExpr[] expr = new CondExpr[2];
 			expr[0] = new CondExpr();
 			expr[0].op = new AttrOperator(AttrOperator.aopEQ);
 			expr[0].type1 = new AttrType(AttrType.attrSymbol);
@@ -469,22 +492,57 @@ public class TopTAJoin {
 			expr[0].next = null;
 			expr[1] = null;
 
-			IndexScan tempIndex = new IndexScan(new IndexType(IndexType.B_Index), indexFileNames[relNum+1], indexNames[relNum+1], inputRelations[relNum+1], stringSizes[relNum+1], attrCount, attrCount, tProjection, expr, joinColumns[relNum+1]+1, false);
+			IndexScan tempIndex = new IndexScan(new IndexType(IndexType.B_Index), indexFileNames[relNum], indexNames[relNum], inputRelations[relNum], stringSizes[relNum], attrCount, attrCount, tProjection, expr, joinColumns[relNum]+1, false);
 			Tuple simpleTuple = new Tuple();
+			int counter = 0,strCount=0;
+			for(int i=0;i<attrTypes.length-1;i++){
+				attrTypes[i] = inputRelations[proj_list[i].relation.key][proj_list[i].offset-1];
+				if(attrTypes[i].attrType==AttrType.attrString)
+					strCount++;
+			}
+			short[] tempStringSizes = new short[strCount];
+			for(int i=0;i<strCount;i++){
+				tempStringSizes[i]=30;
+			}
+			boolean firstTime = true;
+			float tupleScore = tuple.getScore();
 			while((simpleTuple=tempIndex.get_next())!=null){
-				updateTuple(tuple,simpleTuple,relNum+1);
-				if(relNum==numberOfTables && relNum!=mainRelNum)
-					checkForOthers(key, keyType, 1, tuple);
-				else if(relNum!=mainRelNum)
-					checkForOthers(key, keyType, relNum + 1, tuple);
-				else
-				{
+				counter++;
+				//System.out.println("Tuple in checkOthers : ");
+				tuple.setScore(tupleScore);
+				//tuple.print(tuple.attr_Types);
+				//System.out.println("Simple Tuple is");
+				//simpleTuple.print(simpleTuple.attr_Types);
+				updateTuple(tuple,simpleTuple,relNum);
+				tuple.setScore(tupleScore + simpleTuple.getScore());
+				if(firstTime){
+					tuple.setIntFld(attrTypes.length, tuple.getIntFld(attrTypes.length)+1);
+					firstTime = false;
+				}
+				//System.out.println("After updateTuple");
+				//tuple.print(tuple.attr_Types);
+				if(numberOfTables==tuple.getIntFld(attrTypes.length)){
+					tupleCopy.setHdr((short)(proj_list.length+1), attrTypes, tempStringSizes);
+					tuple.setScore(tuple.getScore()/numberOfTables);
 					insertAndUpdateMin(kResultsFile, tuple);
 				}
+				else if(relNum==numberOfTables && relNum!=mainRelNum){
+					checkForOthers(key, keyType, 1, tuple);
+					tuple.setIntFld(attrTypes.length, tuple.getIntFld(attrTypes.length)+1);
+				}
+				else if(relNum!=mainRelNum){
+					checkForOthers(key, keyType, relNum + 1, tuple);
+					tuple.setIntFld(attrTypes.length, tuple.getIntFld(attrTypes.length)+1);
+				}
+				else{
+					//System.out.println("Do Nothing");
+				}
 			}
+			return;
 		}
 		catch(Exception e){
 			System.out.println("Exception in checkForOthers");
+			e.printStackTrace();
 		}
 	}
 	
@@ -493,13 +551,15 @@ public class TopTAJoin {
 			for(int i=tupleOffsets[relNumber];i<tupleOffsets[relNumber+1];i++){
 				switch(attrTypes[i].attrType){
 				case AttrType.attrInteger:
-					mainTuple.setIntFld(i, subTuple.getIntFld(proj_list[i].offset));
+					//System.out.println("Value setting(int): " + subTuple.getIntFld(proj_list[i].offset));
+					mainTuple.setIntFld(i+1, subTuple.getIntFld(proj_list[i].offset));
 					break;
 				case AttrType.attrString:
-					mainTuple.setStrFld(i, subTuple.getStrFld(proj_list[i].offset));
+					//System.out.println("Value setting(str): " + subTuple.getStrFld(proj_list[i].offset));
+					mainTuple.setStrFld(i+1, subTuple.getStrFld(proj_list[i].offset));
 					break;
 				case AttrType.attrReal:
-					mainTuple.setFloFld(i, subTuple.getFloFld(proj_list[i].offset));
+					mainTuple.setFloFld(i+1, subTuple.getFloFld(proj_list[i].offset));
 					break;
 				}
 			}
@@ -523,6 +583,8 @@ public class TopTAJoin {
 				//RID tempRID = ConstantVars.getGlobalRID();
 				//System.out.println("Main Tuple is ");
 				//mainTuple.print(inputRelations[relNumber]);
+				//System.out.println("Main Tuple in performOneIter ");
+				//mainTuple.print(mainTuple.attr_Types);
 				int RIDNum = mainTuple.getIntFld(inputRelations[relNumber].length+1);
 				//System.out.println("Main Tuple RID : " + RIDNum);
 				readRIDs.add(RIDNum);
@@ -532,6 +594,23 @@ public class TopTAJoin {
 				}*/
 				//System.out.println();
 				AttrType keyType = inputRelations[relNumber][joinColumns[relNumber]];
+				if(!duplFlag){
+					switch(keyType.attrType){
+					case AttrType.attrInteger:
+						if(readIntKeys.contains(mainTuple.getIntFld(joinColumns[relNumber]+1)))
+							continue;
+						else
+							readIntKeys.add(mainTuple.getIntFld(joinColumns[relNumber]+1));
+						break;
+					case AttrType.attrString:
+						if(readStrKeys.contains(mainTuple.getStrFld(joinColumns[relNumber]+1)))
+							continue;
+						else
+							readStrKeys.add(mainTuple.getStrFld(joinColumns[relNumber]+1));
+						break;
+						
+					}
+				}
 				switch(keyType.attrType){
 				case AttrType.attrInteger:
 					int intKey = mainTuple.getIntFld(joinColumns[relNumber]+1);

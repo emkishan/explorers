@@ -63,7 +63,9 @@ public class TupleUtils {
 		case AttrType.attrReal: // Compare two floats
 			try {
 				t1_r = t1.getFloFld(t1_fld_no);
+				//System.out.println("T1 Score : " + t1.getScore());
 				t2_r = t2.getFloFld(t2_fld_no);
+				//System.out.println("T2 Score : " + t2.getScore());
 			} catch (FieldNumberOutOfBoundException e) {
 				throw new TupleUtilsException(e,
 						"FieldNumberOutOfBoundException is caught by TupleUtils.java");

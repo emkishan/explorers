@@ -2,6 +2,7 @@ package tests;
 
 import global.AttrOperator;
 import global.AttrType;
+import global.ConstantVars;
 import global.ExcelParser;
 import global.GlobalConst;
 import global.IndexType;
@@ -573,23 +574,20 @@ itr = new AdvancedSort(attrTypeList[j], (short)attrTypeList[j].length, stringSiz
 			
 			
 				case 1: 
-					//long readCount = jjoin.sysdef.JavabaseBM.getReadCount();
-					//long writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
-					//long allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
 					//System.out.println("Before getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-					//readCount = jjoin.sysdef.JavabaseBM.getReadCount();
-					//writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
-					//allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
+					long readCount = ConstantVars.getReadCount();
+					System.out.println("Read count before : " + readCount);
+					long writeCount = ConstantVars.getWriteCount();
+					System.out.println("Write count before : " + writeCount);
+					
 					long before = System.currentTimeMillis();
 					processTopTAJoin();
 					//System.out.println("After getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-					//readCount = jjoin.sysdef.JavabaseBM.getReadCount();
-					//writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
-					//allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
-					/*System.out.println("Pages read : " + (readCount));
-					System.out.println("Pages write : " + (writeCount));
-					System.out.println("Pages allocated : " + (allocateCount));
-					*/long after = System.currentTimeMillis();
+					readCount = ConstantVars.getReadCount();
+					writeCount = ConstantVars.getWriteCount();
+					System.out.println("Pages read : " + (readCount));
+					System.out.println("Pages written : " + (writeCount));
+					long after = System.currentTimeMillis();
 					System.out.println("Time Taken" + (after-before)/1000 + " secs");
 					break;
 				case 0:
