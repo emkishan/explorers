@@ -1091,10 +1091,10 @@ public static void main(String args[]){
     
     try {
     	long startTime = System.currentTimeMillis();
-    	System.out.println("Before " + sysdef.JavabaseBM.getPageAccessCount());
+    	//System.out.println("Before " + sysdef.JavabaseBM.getPageAccessCount());
 		TopRankJoin trj = new TopRankJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 
 joinedColList, iteratorList, b_index, indexNameList, memory, condExprList, projList, projlistIndex, topK, 1 , fileNames);
-		System.out.println("After " + sysdef.JavabaseBM.getPageAccessCount());
+		//System.out.println("After " + sysdef.JavabaseBM.getPageAccessCount());
 		long endTime = System.currentTimeMillis();
 		System.out.println("Total Time = " + (endTime-startTime));
 		for(int k=0;k<4;k++)

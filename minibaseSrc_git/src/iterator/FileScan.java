@@ -126,11 +126,10 @@ public class FileScan extends  Iterator
 	   WrongPermat
     {     
       RID rid = new RID();;
-      
       while(true) {
-	if((tuple1 =  scan.getNext(rid)) == null) {
-	  return null;
-	}
+    	  if((tuple1 =  scan.getNext(rid)) == null) {
+    		  return null;
+      }
 	
 	ConstantVars.setGlobalRID(rid);
 	//System.out.println("in the iterator of filescan: Page: " + rid.pageNo + " Slot: " + rid.slotNo);

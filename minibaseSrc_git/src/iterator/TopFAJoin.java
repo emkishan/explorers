@@ -460,7 +460,7 @@ public class TopFAJoin extends Iterator {
 		Tuple testTuple = new Tuple();
 		try {
 			while((testTuple=fScan.get_next())!=null){
-				//testTuple.print(combinedAttr);
+				testTuple.print(combinedAttr);
 			}
 			fScan.close();
 		} catch (Exception e) {
@@ -481,6 +481,9 @@ public class TopFAJoin extends Iterator {
 		try {
 			while((mainTuple=rScan.get_next())!=null){
 				RID ridScan = ConstantVars.getGlobalRID();
+				RID mainRID = new RID();
+				mainRID.pageNo = ridScan.pageNo;
+				mainRID.slotNo = ridScan.slotNo;
 				String strKey = "";
 				if(inputRelations[0][joinColumns[0]].attrType==AttrType.attrInteger){
 					strKey = String.valueOf(mainTuple.getIntFld(combinedAttrCount));
@@ -555,9 +558,9 @@ public class TopFAJoin extends Iterator {
 							updateTuple(newTuple, mainTuple, i, getTupleOffset(i), rid);
 							mainTuple.setIntFld(combinedAttrCount-1, mainTuple.getIntFld(combinedAttrCount-1)+1);
 							mainTuple.setStrFld(combinedAttrCount, strKey);
-							mainTuple.print(combinedAttr);
-							System.out.println("ridScan: "+ridScan.pageNo.pid+"_"+ridScan.slotNo);
-							tempFile.updateRecord(ridScan, mainTuple);
+							//mainTuple.print(combinedAttr);
+							//System.out.println("ridScan: "+mainRID.pageNo.pid+"_"+mainRID.slotNo);
+							tempFile.updateRecord(mainRID, mainTuple);
 							}
 						}
 					}
@@ -624,8 +627,6 @@ public class TopFAJoin extends Iterator {
 				if(relationExists(relNum, strKey, combinedTuple)){
 					updateTuple(fileTuple, combinedTuple, relNum, getTupleOffset(relNum), rid);
 					RID rs = tempFile.insertRecord(combinedTuple.getTupleByteArray());
-					System.out.println("insert RID: "+rs.pageNo.pid+"_"+rs.slotNo);
-					combinedTuple.print(combinedAttr);
 				}
 				else{
 					RID updateRid = ConstantVars.getGlobalRID();
@@ -634,7 +635,7 @@ public class TopFAJoin extends Iterator {
 					tempFile.updateRecord(updateRid, combinedTuple);
 				}
 				if(combinedTuple.getIntFld(combinedAttrCount-1)==numberOfTables){
-					combinedTuple.print(combinedAttr);
+					//combinedTuple.print(combinedAttr);
 					count++;
 				}
 			}
