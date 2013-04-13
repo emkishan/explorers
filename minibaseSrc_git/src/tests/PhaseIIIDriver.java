@@ -102,10 +102,18 @@ public class PhaseIIIDriver implements GlobalConst{
 			short [][] stringSizesList = new short[numOfTables][];
 			int [] joinedColList = new int[numOfTables]; 
 			Iterator [] iteratorList = new Iterator[numOfTables];
+			Iterator [] updateIteratorList = new Iterator[numOfTables];
+			Iterator [] deleteIteratorList = new Iterator[numOfTables];
 			AttrType [] indexAttrType = new AttrType[numOfTables];
 			String [] indexNameList = new String[numOfTables];
+			String [] updateIndexNameList = new String[numOfTables];
+			String [] deleteIndexNameList = new String[numOfTables];
 			IndexType[] b_index = new IndexType[numOfTables];
+			IndexType[] delete_index = new IndexType[numOfTables];
+			IndexType[] update_index = new IndexType[numOfTables];
 		    String[] fileNames = new String[numOfTables];
+		    String[] updateFiles = new String[numOfTables];
+		    String[] deleteFiles = new String[numOfTables];
 			String [] tableNameList = new String[numOfTables];
 			ArrayList<FldSpec> list = new ArrayList<FldSpec>();
 			FldSpec[] newProjList = null;
@@ -538,6 +546,335 @@ itr = new AdvancedSort(attrTypeList[j], (short)attrTypeList[j].length, stringSiz
 			{
 				//System.out.println("Probed : " + trj.num_probed(i));
 			}
+			System.out.println("update FA (Y/N)?");
+			String updateFlag = scanner.nextLine();
+			if(updateFlag.equalsIgnoreCase("Y")){
+				for(int k=0;k<numOfTables;k++)
+				{
+					int relIndex = k+1;
+				System.out.println("Update Records for "+relIndex+"st Relation (Y/N)?");
+				String update = scanner.nextLine();
+				if(update.equals("Y")){
+					System.out.println("Enter file location");
+					String fileLoc1 = scanner.nextLine();
+					HSSFWorkbook workBook = null; 
+					File file  = new File(fileLoc1);
+					InputStream excelDocumentStream = null;
+					try 
+					{
+						excelDocumentStream = new FileInputStream(file);
+						POIFSFileSystem fsPOI = new POIFSFileSystem(new BufferedInputStream(excelDocumentStream));
+						workBook = new HSSFWorkbook(fsPOI);         
+						ExcelParser parser = new ExcelParser(workBook.getSheetAt(0));
+						String [] res;
+						Heapfile topFile = new Heapfile("update"+relIndex+".in");
+						Tuple t = new Tuple();
+						int numOfColms = numOfColsList[k];
+						AttrType [] Stypes = new AttrType[numOfColms];
+						int col=0;
+						int numOfStringCol =0;
+						
+						try {
+							t.setHdr((short) (numOfColms),attrTypeList[k], stringSizesList[k]);
+						}
+						catch (Exception e) {
+							System.err.println("*** error in Tuple.setHdr() ***");
+							status = false;
+							e.printStackTrace();
+						}
+						RID rid = null;
+						res = parser.splitLine();
+						while (res !=null && res.length!=0)
+						{
+							int i;
+							System.out.println("length: "+ attrTypeList[k].length);
+							for (i = 0; i < attrTypeList[k].length; i++)
+							{
+								AttrType attr= attrTypeList[k][i];
+								//System.out.println("attrType: "+attr);
+								int type = attr.attrType;
+								switch(type){
+						   			case AttrType.attrString: t.setStrFld(i+1, res[i]);
+						   				break;
+						   			case AttrType.attrInteger: t.setIntFld(i+1, Integer.parseInt(res[i]));
+						   				break;
+						   			case AttrType.attrReal: t.setFloFld(i+1, Float.parseFloat(res[i]));
+						   				break;
+								}
+							}
+							rid = topFile.insertRecord(t.getTupleByteArray());
+							String ridKey = rid.pageNo.pid+"_"+rid.slotNo;
+							t.print(attrTypeList[k]);
+							res = parser.splitLine();
+						}
+						excelDocumentStream.close();
+						// create an scan on the heapfile
+					    Scan scan = null;
+					    
+					    try {
+					      scan = new Scan(topFile);
+					    }
+					    catch (Exception e) {
+					      status = false;
+					      e.printStackTrace();
+					      Runtime.getRuntime().exit(1);
+					    }
+					    // create the index file
+					    BTreeFile btf = null;
+					    try {
+					      btf = new BTreeFile("update"+relIndex+"_BTreeIndex", indexAttrType[k].attrType, GlobalConst.INDEX_REC_LEN, 1/*delete*/); 
+					      updateIndexNameList[k] = "update"+relIndex+"_BTreeIndex";
+					      update_index[k] = new IndexType(IndexType.B_Index);
+					      updateFiles[k] = "update"+relIndex+".in";
+					    }
+					    catch (Exception e) {
+					      status = false;
+					      e.printStackTrace();
+					      Runtime.getRuntime().exit(1);
+					    }
+					    System.out.println("BTreeIndex created successfully.\n"); 
+					    RID rid1 = new RID();
+					    Tuple temp = null;
+					    try {
+					      temp = scan.getNext(rid1);
+					    }
+					    catch (Exception e) {
+					      status = false;
+					      e.printStackTrace();
+					    }
+					    while ( temp != null) {
+					      t.tupleCopy(temp);
+					      try {
+					    	  switch(indexAttrType[k].attrType){
+					   			case AttrType.attrString: String keyString = t.getStrFld(joinedColList[k]+1);
+					   									  btf.insert(new StringKey(keyString), rid1); 
+					   										break;
+					   			case AttrType.attrInteger: int keyInt = t.getIntFld(joinedColList[k]+1);
+					   										btf.insert(new IntegerKey(keyInt), rid1); 
+					   										break;
+					   			case AttrType.attrReal: float keyFloat = t.getFloFld(joinedColList[k]+1);
+					   									btf.insert(new RealKey(keyFloat), rid1); 
+					   										break;
+							}
+					      }
+					      catch (Exception e) {
+					    	  status = false;
+					    	  e.printStackTrace();
+					      }
+					     try {
+					    	 temp = scan.getNext(rid1);
+					      }
+					      catch (Exception e) {
+					    	  status = false;
+					    	  e.printStackTrace();
+					      }
+					    }
+					    // close the file scan
+					    scan.closescan();
+					    System.out.println("BTreeIndex file created successfully.\n"); 
+					}    
+			      catch(Exception e)
+			      {
+			        e.printStackTrace();
+			      }
+				}
+			
+			else if(update.equalsIgnoreCase("N")){
+				updateFiles[k]="";
+				updateIndexNameList[k] = "";
+			    update_index[k] = null;
+			}
+		
+
+			System.out.println("Delete Records for "+relIndex+"st Relation (Y/N)?");
+			String delete = scanner.nextLine();
+			if(delete.equals("Y")){
+				System.out.println("Enter file location");
+				String fileLoc1 = scanner.nextLine();
+				HSSFWorkbook workBook = null; 
+				File file  = new File(fileLoc1);
+				InputStream excelDocumentStream = null;
+				try 
+				{
+					excelDocumentStream = new FileInputStream(file);
+					POIFSFileSystem fsPOI = new POIFSFileSystem(new BufferedInputStream(excelDocumentStream));
+					workBook = new HSSFWorkbook(fsPOI);         
+					ExcelParser parser = new ExcelParser(workBook.getSheetAt(0));
+					String [] res;
+					Heapfile topFile = new Heapfile("delete"+relIndex+".in");
+					Tuple t = new Tuple();
+					int numOfColms = numOfColsList[k];
+					AttrType [] Stypes = new AttrType[numOfColms+1];
+					int col=0;
+					int numOfStringCol =0;
+					
+					try {
+						t.setHdr((short) (numOfColms+1),attrTypeList[k], stringSizesList[k]);
+					}
+					catch (Exception e) {
+						System.err.println("*** error in Tuple.setHdr() ***");
+						status = false;
+						e.printStackTrace();
+					}
+					RID rid = null;
+					res = parser.splitLine();
+					while (res !=null && res.length!=0)
+					{
+						int i;
+						for (i = 0; i < attrTypeList[k].length; i++)
+						{
+							AttrType attr= attrTypeList[k][i];
+							int type = attr.attrType;
+							switch(type){
+					   			case AttrType.attrString: t.setStrFld(i+1, res[i]);
+					   				break;
+					   			case AttrType.attrInteger: t.setIntFld(i+1, Integer.parseInt(res[i]));
+					   				break;
+					   			case AttrType.attrReal: t.setFloFld(i+1, Float.parseFloat(res[i]));
+					   				break;
+							}
+						}
+						rid = topFile.insertRecord(t.getTupleByteArray());
+						String ridKey = rid.pageNo.pid+"_"+rid.slotNo;
+						t.print(attrTypeList[k]);
+						res = parser.splitLine();
+					}
+					excelDocumentStream.close();
+					// create an scan on the heapfile
+				    Scan scan = null;
+				    
+				    try {
+				      scan = new Scan(topFile);
+				    }
+				    catch (Exception e) {
+				      status = false;
+				      e.printStackTrace();
+				      Runtime.getRuntime().exit(1);
+				    }
+				    // create the index file
+				    BTreeFile btf = null;
+				    try {
+				      btf = new BTreeFile("delete"+relIndex+"_BTreeIndex", indexAttrType[k].attrType, GlobalConst.INDEX_REC_LEN, 1/*delete*/); 
+				      deleteIndexNameList[k] = "delete"+relIndex+"_BTreeIndex";
+				      delete_index[k] = new IndexType(IndexType.B_Index);
+				      deleteFiles[k] = "delete"+relIndex+".in";
+				    }
+				    catch (Exception e) {
+				      status = false;
+				      e.printStackTrace();
+				      Runtime.getRuntime().exit(1);
+				    }
+				    System.out.println("BTreeIndex created successfully.\n"); 
+				    RID rid1 = new RID();
+				    Tuple temp = null;
+				    try {
+				      temp = scan.getNext(rid1);
+				    }
+				    catch (Exception e) {
+				      status = false;
+				      e.printStackTrace();
+				    }
+				    while ( temp != null) {
+				      t.tupleCopy(temp);
+				      try {
+				    	  switch(indexAttrType[k].attrType){
+				   			case AttrType.attrString: String keyString = t.getStrFld(joinedColList[k]+1);
+				   									  btf.insert(new StringKey(keyString), rid1); 
+				   										break;
+				   			case AttrType.attrInteger: int keyInt = t.getIntFld(joinedColList[k]+1);
+				   										btf.insert(new IntegerKey(keyInt), rid1); 
+				   										break;
+				   			case AttrType.attrReal: float keyFloat = t.getFloFld(joinedColList[k]+1);
+				   									btf.insert(new RealKey(keyFloat), rid1); 
+				   										break;
+						}
+				      }
+				      catch (Exception e) {
+				    	  status = false;
+				    	  e.printStackTrace();
+				      }
+				     try {
+				    	 temp = scan.getNext(rid1);
+				      }
+				      catch (Exception e) {
+				    	  status = false;
+				    	  e.printStackTrace();
+				      }
+				    }
+				    // close the file scan
+				    scan.closescan();
+				    System.out.println("BTreeIndex file created successfully.\n"); 
+				}    
+		      catch(Exception e)
+		      {
+		        e.printStackTrace();
+		      }
+			}
+		else if(delete.equalsIgnoreCase("N")){
+			deleteFiles[k]="";
+			deleteIndexNameList[k] = "";
+		    delete_index[k] = null;
+			}
+		}
+				for(int k=0;k<numOfTables;k++){
+					if(!updateFiles[k].equals("")){
+						Iterator am = null;
+						FldSpec[] Sprojection = new FldSpec[attrTypeList[k].length];
+						for(int i=0;i<Sprojection.length;i++){
+							Sprojection[i] = new FldSpec(new RelSpec(RelSpec.outer), i+1);
+						}
+						try {
+							am  = new FileScan(updateFiles[k], attrTypeList[k], stringSizesList[k], 
+							  (short)(numOfColsList[k]), (short)(numOfColsList[k]),
+							  Sprojection, null);
+						} 
+						catch (Exception e) {
+							e.printStackTrace();
+							System.err.println (""+e);
+						}
+					if (status != true) {
+						System.err.println ("*** Error setting up scan for sailors");
+						Runtime.getRuntime().exit(1);
+					}
+				Iterator itr = null;
+				itr = new Sort(attrTypeList[k], (short)attrTypeList[k].length, stringSizesList[k],am, numOfColsList[k], new TupleOrder(TupleOrder.Descending), 4, memory );
+				updateIteratorList[k] = itr;
+				}
+					else{
+						updateIteratorList[k] = null;
+					}
+					
+					if(!deleteFiles[k].equals("")){
+						Iterator am = null;
+						FldSpec[] Sprojection = new FldSpec[attrTypeList[k].length];
+						for(int i=0;i<Sprojection.length;i++){
+							Sprojection[i] = new FldSpec(new RelSpec(RelSpec.outer), i+1);
+						}
+						try {
+							am  = new FileScan(deleteFiles[k], attrTypeList[k], stringSizesList[k], 
+							  (short)(numOfColsList[k]), (short)(numOfColsList[k]),
+							  Sprojection, null);
+						} 
+						catch (Exception e) {
+							e.printStackTrace();
+							System.err.println (""+e);
+						}
+					if (status != true) {
+						System.err.println ("*** Error setting up scan for sailors");
+						Runtime.getRuntime().exit(1);
+					}
+				Iterator itr = null;
+				itr = new Sort(attrTypeList[k], (short)attrTypeList[k].length, stringSizesList[k],am, numOfColsList[k], new TupleOrder(TupleOrder.Descending), 4, memory );
+				deleteIteratorList[k] = itr;
+				}
+					else{
+						deleteIteratorList[k] = null;
+					}
+				}
+			}
+			else if(updateFlag.equalsIgnoreCase("N")){
+				System.exit(0);
+			}
 							
 		}catch(Exception e){
 			e.printStackTrace();
@@ -575,18 +912,18 @@ itr = new AdvancedSort(attrTypeList[j], (short)attrTypeList[j].length, stringSiz
 			
 				case 1: 
 					//System.out.println("Before getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-					long readCount = ConstantVars.getReadCount();
-					System.out.println("Read count before : " + readCount);
-					long writeCount = ConstantVars.getWriteCount();
-					System.out.println("Write count before : " + writeCount);
+					//long readCount = ConstantVars.getReadCount();
+					//System.out.println("Read count before : " + readCount);
+					//long writeCount = ConstantVars.getWriteCount();
+					//System.out.println("Write count before : " + writeCount);
 					
 					long before = System.currentTimeMillis();
 					processTopTAJoin();
 					//System.out.println("After getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-					readCount = ConstantVars.getReadCount();
-					writeCount = ConstantVars.getWriteCount();
-					System.out.println("Pages read : " + (readCount));
-					System.out.println("Pages written : " + (writeCount));
+					//readCount = ConstantVars.getReadCount();
+					//writeCount = ConstantVars.getWriteCount();
+					//System.out.println("Pages read : " + (readCount));
+					//System.out.println("Pages written : " + (writeCount));
 					long after = System.currentTimeMillis();
 					System.out.println("Time Taken" + (after-before)/1000 + " secs");
 					break;
