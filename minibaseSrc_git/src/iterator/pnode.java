@@ -15,7 +15,7 @@ public class pnode {
 
   /** the tuple reference */
   public Tuple   tuple;
-
+ 
   /**
    * class constructor, sets <code>run_num</code> to 0 and <code>tuple</code>
    * to null.
@@ -23,7 +23,7 @@ public class pnode {
   public pnode() 
   {
     run_num = 0;  // this may need to be changed
-    tuple = null; 
+    tuple = null;
   }
   
   /**

@@ -188,7 +188,7 @@ public class Sort extends Iterator implements GlobalConst
     while ((p_elems_curr_Q + p_elems_other_Q) < max_elems) {
       try {
 	tuple = _am.get_next();  // according to Iterator.java
-      } catch (Exception e) {
+	} catch (Exception e) {
 	e.printStackTrace(); 
 	throw new SortException(e, "Sort.java: get_next() failed");
       } 
