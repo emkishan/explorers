@@ -876,7 +876,8 @@ public class PhaseIIIDriver implements GlobalConst{
 					//trj.deleteFA(deleteIndexNameList,deleteFiles, attrTypeList, stringSizesList,delete_index, deleteIteratorList);
 					//trj.updateFA(updateIndexNameList,updateFiles,attrTypeList, stringSizesList,update_index, updateIteratorList);
 				}
-				trj.updateTAResults(updateIteratorList,deleteIteratorList);
+				trj.updateTAResults(updateIteratorList,deleteIteratorList,updateIndexNameList,updateFiles,update_index);
+				//trj.updateFA(updateIndexNameList,updateFiles,update_index, updateIteratorList);
 			}
 			else if(updateFlag.equalsIgnoreCase("N")){
 				return;
