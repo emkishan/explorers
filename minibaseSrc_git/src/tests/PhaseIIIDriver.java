@@ -879,7 +879,7 @@ public class PhaseIIIDriver implements GlobalConst{
 				trj.updateTAResults(updateIteratorList,deleteIteratorList);
 			}
 			else if(updateFlag.equalsIgnoreCase("N")){
-				System.exit(0);
+				return;
 			}
 
 		}catch(Exception e){
@@ -918,18 +918,18 @@ public class PhaseIIIDriver implements GlobalConst{
 
 			case 1: 
 				//System.out.println("Before getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-				//long readCount = ConstantVars.getReadCount();
+				long readCount = ConstantVars.getReadCount();
 				//System.out.println("Read count before : " + readCount);
-				//long writeCount = ConstantVars.getWriteCount();
+				long writeCount = ConstantVars.getWriteCount();
 				//System.out.println("Write count before : " + writeCount);
 
 				long before = System.currentTimeMillis();
 				processTopTAJoin();
 				//System.out.println("After getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-				//readCount = ConstantVars.getReadCount();
-				//writeCount = ConstantVars.getWriteCount();
-				//System.out.println("Pages read : " + (readCount));
-				//System.out.println("Pages written : " + (writeCount));
+				readCount = ConstantVars.getReadCount();
+				writeCount = ConstantVars.getWriteCount();
+				System.out.println("Pages read : " + (readCount));
+				System.out.println("Pages written : " + (writeCount));
 				long after = System.currentTimeMillis();
 				System.out.println("Time Taken" + (after-before)/1000 + " secs");
 				break;

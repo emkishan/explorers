@@ -20,6 +20,7 @@ import java.util.HashSet;
 
 import btree.BTreeFile;
 import btree.IntegerKey;
+import btree.StringKey;
 
 
 public class TopTAJoin {
@@ -255,6 +256,8 @@ public class TopTAJoin {
 					int column = superOffsets[i]+inputRelations[i].length+1;
 					temp.setHdr((short)(superAttrTypes.length),superAttrTypes,superStrSizes);
 					int keyInt = temp.getIntFld(column);
+					//System.out.println("Inserting " + keyInt);
+					//temp.print(superAttrTypes);
 					interBTF[i].insert(new IntegerKey(keyInt), rid1);
 				}
 				temp = s.getNext(rid1);
@@ -569,8 +572,8 @@ public class TopTAJoin {
 			superTuple.setFloFld(superAttrTypes.length, superTuple.getFloFld(superAttrTypes.length)/numberOfTables);
 			//System.out.println("Final Score: " + combinedTuple.getScore());
 			//insertAndUpdateMin(kResultsFile,combinedTuple);
-			System.out.println("FINAL TUPLE");
-			combinedTuple.print(combinedAttrTypes);
+			//System.out.println("FINAL TUPLE");
+			//combinedTuple.print(combinedAttrTypes);
 			//System.out.println(combinedTuple.getFloFld(combinedAttrTypes.length));
 			insertAndUpdateMin(kResultsFile, combinedTuple,0);
 			interTAtuples.insertRecord(superTuple.getTupleByteArray());
@@ -655,7 +658,9 @@ public class TopTAJoin {
 			if(tupScore>min || kResultsFile.getRecCnt()<numberOfTables){
 				tempRID = heapFile.insertRecord(tuple.getTupleByteArray());
 			}
+			//System.out.println("Entered func");
 			if(heapFile.getRecCnt()>knumberOfTuples){
+				//System.out.println("Min RID Page No:" + minRID.pageNo + " Slot No: " + minRID.slotNo);
 				heapFile.deleteRecord(minRID);
 			}
 			for(int i=0;i<numberOfTables;i++){
@@ -709,7 +714,7 @@ public class TopTAJoin {
 					tempMin = score;
 					//System.out.println("Came into the if condition for score: " + score);
 					if(minRID==null){
-						//System.out.println("First visit into the function");
+						System.out.println("Part setting minRID");
 						minRID.pageNo = taRID.pageNo;
 						minRID.slotNo = taRID.slotNo;
 						break;
@@ -722,6 +727,7 @@ public class TopTAJoin {
 						//System.out.println("Going into the second if");
 						/*tempRID.pageNo = taRID.pageNo;
 						tempRID.slotNo = taRID.slotNo;*/
+						//System.out.println("Setting RID to Page No:" + taRID.pageNo + " Slot No: " + taRID.slotNo);
 						minRID.pageNo = taRID.pageNo;
 						minRID.slotNo = taRID.slotNo;
 						flag = true;
@@ -736,7 +742,7 @@ public class TopTAJoin {
 				valRID = taRID.pageNo.pid * 1000 + taRID.slotNo;
 				recordCount++;
 			}
-			
+			//System.out.println("End- Min RID Page No : " + minRID.pageNo + " Slot No: " + minRID.slotNo);
 				/*minRID.pageNo = tempRID.pageNo;
 				minRID.slotNo = tempRID.slotNo;
 				System.out.println("After Min RID Page : " + minRID.pageNo + " Slot : " + minRID.slotNo);*/
@@ -855,7 +861,7 @@ public class TopTAJoin {
 					firstTime = false;
 				}
 				//System.out.println("After updateTuple");
-				tuple.print(combinedAttrTypes);
+				//tuple.print(combinedAttrTypes);
 				if(numberOfTables==tuple.getIntFld(combinedAttrTypes.length-1)){
 					tupleCopy.setHdr((short)(proj_list.length+1), attrTypes, tempStringSizes);
 					tuple.setFloFld(combinedAttrTypes.length,tuple.getFloFld(combinedAttrTypes.length)/numberOfTables);
@@ -1040,11 +1046,15 @@ public class TopTAJoin {
 					tempTuple = tempIndex.get_next();
 				}
 				if(tempTuple!=null){
+					RID superRID = new RID();
+					superRID.pageNo=temprid.pageNo;
+					superRID.slotNo=temprid.slotNo;
 					if(kMinimums[relation]<tempTuple.getFloFld(inputRelations[relation].length)){
 						deleteFromKTuples(relation,temprid);
-						System.out.println("Deletion should happen for record in relation " + relation + " with score " + tempTuple.getFloFld(inputRelations[relation].length));
+						//System.out.println("Deletion should happen for record in relation " + relation + " with score " + tempTuple.getFloFld(inputRelations[relation].length));
 					}
-					deleteFromInterFile(temprid,relation);
+					System.out.println("TempRID in first call : " + (superRID.pageNo.pid*1000 + superRID.slotNo));
+					deleteFromInterFile(superRID,relation);
 				}
 			}
 			if(kResultsFile.getRecCnt() < knumberOfTuples)
@@ -1072,6 +1082,8 @@ public class TopTAJoin {
 			int counter=0;
 			while(kResultsFile.getRecCnt()<knumberOfTuples){
 				tempTuple.setHdr((short)superAttrTypes.length,superAttrTypes,superStrSizes);
+				//System.out.println("Record from interFile");
+				//tempTuple.print(superAttrTypes);
 				for(int i=1;i<=combinedAttrTypes.length-2;i++){
 					switch(combinedAttrTypes[i-1].attrType){
 					case AttrType.attrInteger:
@@ -1118,7 +1130,9 @@ public class TopTAJoin {
 				}
 				tempTuple = scan.getNext(rid);
 			}
-			if(count==kResultsFile.getRecCnt()){
+			if(count==kResultsFile.getRecCnt() && fullTuple(kTuple, combinedAttrTypes, joinColumns)){
+				//System.out.println("inserting record : ");
+				kTuple.print(combinedAttrTypes);
 				kResultsFile.insertRecord(kTuple.getTupleByteArray());
 			}
 		}
@@ -1128,19 +1142,49 @@ public class TopTAJoin {
 		}
 	}
 	
+	private boolean fullTuple(Tuple tuple,AttrType[] tupAttrTypes, int[] joiningOn){
+		boolean returnVal = true;
+		try{
+			AttrType keyType = tupAttrTypes[joiningOn[0]];
+			for(int i=0;i<joiningOn.length;i++){
+				switch(keyType.attrType){
+				case AttrType.attrInteger:
+					if(tuple.getIntFld(tupleOffsets[i]+joiningOn[i]+1)==0)
+						returnVal=false;
+					break;
+				case AttrType.attrString:
+					if(tuple.getStrFld(tupleOffsets[i]+joiningOn[i]+1).equals(""))
+						returnVal=false;
+					break;
+				}
+			}
+			return returnVal;
+		}
+		catch(Exception e){
+			System.out.println("Exception in emptyTuple");
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
 	private void deleteFromKTuples(int relation,RID temprid){
 		try{
 			int RIDVal = temprid.pageNo.pid*1000 + temprid.slotNo;
 			Scan fs = new Scan(kResultsFile);
 			RID rid = new RID();
 			Tuple delTuple = fs.getNext(rid);
+			//System.out.println("Entering while loop");
+			//System.out.println("RID to be deleted : " + (temprid.pageNo.pid*1000 + temprid.slotNo));
 			while(delTuple!=null){
 				delTuple.setHdr((short)combinedAttrTypes.length, combinedAttrTypes, superStrSizes);
+				//System.out.println("Value of RID: " + delTuple.getIntFld(tupleOffsets[relation+1]));
 				if(delTuple.getIntFld(tupleOffsets[relation+1])==RIDVal){
+					//System.out.println("Deleted Record");
 					kResultsFile.deleteRecord(rid);
 				}
 				delTuple = fs.getNext(rid);
 			}
+			//printKFile();
 		}
 		catch(Exception e){
 			System.out.println("Exception in deleteFromKTuples");
@@ -1150,10 +1194,10 @@ public class TopTAJoin {
 
 	private void deleteFromInterFile(RID delRID, int relation){
 		try{
-			System.out.println("Before delete " + interTAtuples.getRecCnt());
+			//System.out.println("Before delete " + interTAtuples.getRecCnt());
 			int rid = delRID.pageNo.pid*1000 + delRID.slotNo;
 			int colNum = superOffsets[relation] + inputRelations[relation].length;
-			System.out.println("Index scan on the colNum " + colNum + " on RID : " + rid);
+			//System.out.println("Index scan on the colNum " + colNum + " on RID : " + rid);
 			int attrCount = superAttrTypes.length+1;
 			FldSpec[] tProjection = new FldSpec[attrCount];
 			for (int i = 0; i < attrCount; i++)
@@ -1168,7 +1212,7 @@ public class TopTAJoin {
 			expr[0].operand2.integer = rid;			
 			expr[0].next = null;
 			expr[1] = null;
-
+			
 			/*Scan s = new Scan(interTAtuples);
 			Tuple t = new Tuple();
 			t.setHdr((short)superAttrTypes.length, superAttrTypes,superStrSizes);
@@ -1176,19 +1220,77 @@ public class TopTAJoin {
 			while((t=s.getNext(srid))!=null){
 				t.print(superAttrTypes);
 			}*/
-
+			//System.out.println("RID value in deleteFromInterFile" + rid);
 			IndexScan interIndexScan = new IndexScan(new IndexType(IndexType.B_Index),"interTATuples.in",interIndexName[relation],superAttrTypes,superStrSizes,superAttrTypes.length,superAttrTypes.length,tProjection,expr,colNum+1,false);
 			Tuple delTuple = interIndexScan.get_next();
 			while(delTuple!=null){
+				//System.out.println("Tuple being processed : ");
+				//delTuple.print(superAttrTypes);
 				RID tempRID = ConstantVars.getGlobalRID();
-				interTAtuples.deleteRecord(tempRID);
+				int intKey=0;
+				intKey = delTuple.getIntFld(tupleOffsets[relation+1]);
+				float delScore = delTuple.getFloFld(tupleOffsets[relation+1]-1);
+				for(int r=tupleOffsets[relation];r<tupleOffsets[relation+1]-1;r++){
+					switch(inputRelations[relation][r-tupleOffsets[relation]].attrType){
+					case AttrType.attrInteger:
+						delTuple.setIntFld(r+1, 0);
+						break;
+					case AttrType.attrString:
+						delTuple.setStrFld(r+1, "");
+						break;
+					case AttrType.attrReal:
+						delTuple.setFloFld(r+1, 0.0f);
+						break;
+					}
+				}
+				delTuple.setIntFld(tupleOffsets[relation+1],0);
+				
+				
+				//delTuple.setIntFld(superAttrTypes.length-1, delTuple.getIntFld(superAttrTypes.length-1)-1);
+				delTuple.setFloFld(superAttrTypes.length, delTuple.getFloFld(superAttrTypes.length)*numberOfTables-delScore);
+				if(emptyTuple(delTuple,superAttrTypes,joinColumns)){
+					interTAtuples.deleteRecord(tempRID);
+					interBTF[relation].Delete(new IntegerKey(intKey), tempRID);
+				}
+				else{
+					interTAtuples.updateRecord(tempRID, delTuple);
+				//System.out.println("Updated record");
+				//Tuple dummy = interTAtuples.getRecord(tempRID);
+				//dummy.setHdr((short)superAttrTypes.length, superAttrTypes, superStrSizes);
+				//dummy.print(superAttrTypes);
+				}
 				delTuple = interIndexScan.get_next();
 			}
-			System.out.println("After delete " + interTAtuples.getRecCnt());
+			//System.out.println("After delete " + interTAtuples.getRecCnt());
 		}
 		catch(Exception e){
 			System.out.println("Error in deleteFromInterFile");
 			e.printStackTrace();
+		}
+	}
+	
+	private boolean emptyTuple(Tuple tuple,AttrType[] tupAttrTypes, int[] joiningOn){
+		boolean returnVal = true;
+		try{
+			AttrType keyType = tupAttrTypes[joiningOn[0]];
+			for(int i=0;i<joiningOn.length;i++){
+				switch(keyType.attrType){
+				case AttrType.attrInteger:
+					if(tuple.getIntFld(tupleOffsets[i]+joiningOn[i]+1)!=0)
+						returnVal=false;
+					break;
+				case AttrType.attrString:
+					if(!tuple.getStrFld(tupleOffsets[i]+joiningOn[i]+1).equals(""))
+						returnVal=false;
+					break;
+				}
+			}
+			return returnVal;
+		}
+		catch(Exception e){
+			System.out.println("Exception in emptyTuple");
+			e.printStackTrace();
+			return false;
 		}
 	}
 
