@@ -8,6 +8,7 @@ import global.IndexType;
 import global.RID;
 import global.TupleOrder;
 import heap.FieldNumberOutOfBoundException;
+import heap.FileAlreadyDeletedException;
 import heap.HFBufMgrException;
 import heap.HFDiskMgrException;
 import heap.HFException;
@@ -21,19 +22,12 @@ import heap.SpaceNotAvailableException;
 import heap.Tuple;
 import index.IndexException;
 import index.IndexScan;
-import index.UnknownIndexTypeException;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Set;
+import java.util.TreeMap;
 
-import javax.swing.GroupLayout.SequentialGroup;
-
-import btree.AddFileEntryException;
 import btree.BTreeFile;
-import btree.ConstructPageException;
-import btree.GetFileEntryException;
 import btree.IntegerKey;
 import btree.StringKey;
 import bufmgr.PageNotReadException;
@@ -55,37 +49,50 @@ public class TopFAJoin extends Iterator {
 	private Tuple JTuple;
 	private int numOfScanned[], numOfProbed[];
 	private Heapfile heapFiles[], outFile;
-	private RID fileRid;
 	private boolean firstTime;
 	private String[] indexFileNames;
-	private boolean duplFlag= false;
+	private boolean duplFlag = false;
 	private String[] fileNames;
+	private String[] updateFileNames;
+	private String[] updateIndexNames;
 	private Tuple combinedTuple = new Tuple();
+	private Tuple randomTuple = new Tuple();
 	private Tuple t = new Tuple();
 	private RID newRid = new RID();
 	private int combinedAttrCount = 0;
 	private Heapfile tempFile = null;
 	private FileScan fScan = null;
 	private Tuple mainTuple = new Tuple();
-	private AttrType[] combinedAttr =null;
+	private AttrType[] combinedAttr = null;
 	private short[] combinedStrSizes = null;
-	private FldSpec [] combinedProjection = null;
+	private FldSpec[] combinedProjection = null;
+	private float[] topkMinSum;
+	private float topKmin = 1.0f;
+	private HashMap<Integer, ArrayList<String>> ridMap = new HashMap<Integer, ArrayList<String>>();
+	private HashMap<Integer, Boolean> relMap = new HashMap<Integer, Boolean>();
+	private HashMap<String, ArrayList<Float>> keyMap = new HashMap<String, ArrayList<Float>>();
+	private boolean checkFirst = false;
+	private RID lastAccessedRID = new RID();
+	private BTreeFile tempFileBtf = null;
+	private BTreeFile insertIndex = null;
 
 	public TopFAJoin(int numTables, AttrType[][] in, int[] len_in,
 			short[][] s_sizes, int[] join_col_in, Iterator[] am,
 			IndexType[] index, java.lang.String[] indNames, int amt_of_mem,
 			CondExpr[] outFilter, FldSpec[] proj_list, int n_out_flds, int num,
-			int rank, String[] fileNames) throws IOException, TopRankJoinException {
-		
-		//System.out.println("in TopFA");
+			int rank, String[] fileNames) throws IOException,
+			TopRankJoinException {
+
+		// System.out.println("in TopFA");
 		numberOfTables = numTables;
 		inputRelations = new AttrType[numTables][];
 		indexFileNames = indNames;
-		joinColumns=join_col_in;
+		joinColumns = join_col_in;
 		outFile = null;
 		iterators = am;
-		this.fileNames =  fileNames;
-		//System.out.println("iterators : "+iterators.length);
+		this.fileNames = fileNames;
+		topkMinSum = new float[numberOfTables];
+		// System.out.println("iterators : "+iterators.length);
 		try {
 			outFile = new Heapfile("TopRankJoin.in");
 		} catch (HFException e1) {
@@ -98,17 +105,17 @@ public class TopFAJoin extends Iterator {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
-		if(duplFlag){
-			
+
+		if (duplFlag) {
+
 		}
 		// Copy the attribute types
 		lengths = new int[numTables];
-		
-		for(int i=0;i<in.length;i++){
+
+		for (int i = 0; i < in.length; i++) {
 			inputRelations[i] = new AttrType[in[i].length];
 			lengths[i] = len_in[i];
-			for(int j=0;j<in[i].length;j++){
+			for (int j = 0; j < in[i].length; j++) {
 				inputRelations[i][j] = in[i][j];
 			}
 		}
@@ -123,10 +130,10 @@ public class TopFAJoin extends Iterator {
 
 		// Copy the String sizes and initialize tuples
 		stringSizes = new short[s_sizes.length][];
-		//innerTuples = new
+		// innerTuples = new
 		for (int i = 0; i < numTables; i++) {
 			stringSizes[i] = s_sizes[i];
-			//innerTuples[i] = new Tuple();
+			// innerTuples[i] = new Tuple();
 		}
 
 		JTuple = new Tuple();
@@ -147,8 +154,8 @@ public class TopFAJoin extends Iterator {
 			numOfProbed[i] = 0;
 			numOfScanned[i] = 0;
 		}
-		
-		for(int i=0;i<proj_list.length;i++){
+
+		for (int i = 0; i < proj_list.length; i++) {
 			this.proj_list[i] = proj_list[i];
 		}
 		// Initialize Heap Files
@@ -167,48 +174,52 @@ public class TopFAJoin extends Iterator {
 		} catch (Exception e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
-		} 
-		for(int i=0;i<inputRelations.length;i++){
-			combinedAttrCount+=inputRelations[i].length;
 		}
-		for(int i=0;i<stringSizes.length;i++){
-				strAttrCount+=stringSizes[i].length;
+		for (int i = 0; i < inputRelations.length; i++) {
+			combinedAttrCount += inputRelations[i].length;
 		}
-		if(inputRelations[0][joinColumns[0]].attrType== AttrType.attrString){
-			strAttrCount+=1;
+		for (int i = 0; i < stringSizes.length; i++) {
+			strAttrCount += stringSizes[i].length;
 		}
-		combinedAttrCount+=2;
-		int attrCount =0;
-		int strCount=0;
+		if (inputRelations[0][joinColumns[0]].attrType == AttrType.attrString) {
+			strAttrCount += 1;
+		}
+		combinedAttrCount += 3;
+		int attrCount = 0;
+		int strCount = 0;
 		combinedAttr = new AttrType[combinedAttrCount];
 		combinedStrSizes = new short[strAttrCount];
-		for(int i =0;i<inputRelations.length;i++){
-			int count=0;
-			for(int j=0;j<inputRelations[i].length;j++){
-				//System.out.println("attr length: "+ inputRelations[i].length);
+		for (int i = 0; i < inputRelations.length; i++) {
+			int count = 0;
+			for (int j = 0; j < inputRelations[i].length; j++) {
+				// System.out.println("attr length: "+
+				// inputRelations[i].length);
 				combinedAttr[attrCount++] = inputRelations[i][j];
-				if(inputRelations[i][j].attrType==AttrType.attrString)
+				if (inputRelations[i][j].attrType == AttrType.attrString)
 					combinedStrSizes[strCount++] = stringSizes[i][count++];
 			}
 		}
+		combinedAttr[attrCount++] = new AttrType(AttrType.attrReal);
 		combinedAttr[attrCount++] = new AttrType(AttrType.attrInteger);
-		if(inputRelations[0][joinColumns[0]].attrType== AttrType.attrInteger){
+		if (inputRelations[0][joinColumns[0]].attrType == AttrType.attrInteger) {
 			combinedAttr[attrCount++] = new AttrType(AttrType.attrInteger);
-		}
-		else if(inputRelations[0][joinColumns[0]].attrType== AttrType.attrString){
+		} else if (inputRelations[0][joinColumns[0]].attrType == AttrType.attrString) {
 			combinedAttr[attrCount++] = new AttrType(AttrType.attrString);
 			combinedStrSizes[strCount++] = 20;
 		}
 		combinedProjection = new FldSpec[combinedAttrCount];
-		for(int attr=0; attr<combinedAttrCount; attr++){
-			combinedProjection[attr]= new FldSpec(new RelSpec(RelSpec.outer), attr+1);
+		for (int attr = 0; attr < combinedAttrCount; attr++) {
+			combinedProjection[attr] = new FldSpec(new RelSpec(RelSpec.outer),
+					attr + 1);
 		}
-		for(int i=0;i<combinedAttr.length;i++){
-			//System.out.println("i: "+combinedAttr[i]);
-		}
+
 		try {
-			combinedTuple.setHdr((short)combinedAttrCount, combinedAttr, combinedStrSizes);
-			mainTuple.setHdr((short)combinedAttrCount, combinedAttr, combinedStrSizes);
+			combinedTuple.setHdr((short) combinedAttrCount, combinedAttr,
+					combinedStrSizes);
+			mainTuple.setHdr((short) combinedAttrCount, combinedAttr,
+					combinedStrSizes);
+			randomTuple.setHdr((short) combinedAttrCount, combinedAttr,
+					combinedStrSizes);
 		} catch (InvalidTypeException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -216,14 +227,14 @@ public class TopFAJoin extends Iterator {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 	}
 
 	public Tuple get_next() throws IOException, JoinsException, IndexException,
-	InvalidTupleSizeException, InvalidTypeException,
-	PageNotReadException, TupleUtilsException, PredEvalException,
-	SortException, LowMemException, UnknowAttrType,
-	UnknownKeyTypeException, Exception {
+			InvalidTupleSizeException, InvalidTypeException,
+			PageNotReadException, TupleUtilsException, PredEvalException,
+			SortException, LowMemException, UnknowAttrType,
+			UnknownKeyTypeException, Exception {
 		if (firstTime) {
 			createTopKTuples();
 		}
@@ -232,52 +243,52 @@ public class TopFAJoin extends Iterator {
 
 	}
 
-	private boolean validTuple(Tuple tempTuple,int relationNumber){
+	/*private boolean validTuple(Tuple tempTuple, int relationNumber) {
 		boolean returnValue = true;
-		try{
-			for(int i=0;i<outFilter.length;i++){
+		try {
+			for (int i = 0; i < outFilter.length; i++) {
 				AttrType left = outFilter[i].type2;
 				FldSpec operand1Sym = outFilter[i].operand1.symbol;
 				int colNo = operand1Sym.offset;
 				int relNo = operand1Sym.relation.key;
-				if(relNo == relationNumber){
-					switch(left.attrType){
+				if (relNo == relationNumber) {
+					switch (left.attrType) {
 					case AttrType.attrInteger:
 						int rightPart = outFilter[i].operand2.integer;
 						int leftInt = tempTuple.getIntFld(colNo);
-						switch(outFilter[i].op.attrOperator){
+						switch (outFilter[i].op.attrOperator) {
 						case AttrOperator.aopEQ:
-							if(rightPart==leftInt)
+							if (rightPart == leftInt)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopGE:
-							if(leftInt >= rightPart)
+							if (leftInt >= rightPart)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopGT:
-							if(leftInt > rightPart)
+							if (leftInt > rightPart)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopLE:
-							if(leftInt <= rightPart)
+							if (leftInt <= rightPart)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopLT:
-							if(leftInt < rightPart)
+							if (leftInt < rightPart)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopNE:
-							if(leftInt != rightPart)
+							if (leftInt != rightPart)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
@@ -287,39 +298,39 @@ public class TopFAJoin extends Iterator {
 					case AttrType.attrReal:
 						float rightFloat = outFilter[i].operand2.real;
 						float leftFloat = tempTuple.getFloFld(colNo);
-						switch(outFilter[i].op.attrOperator){
+						switch (outFilter[i].op.attrOperator) {
 						case AttrOperator.aopEQ:
-							if(leftFloat==rightFloat)
+							if (leftFloat == rightFloat)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopGE:
-							if(leftFloat >= rightFloat)
+							if (leftFloat >= rightFloat)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopGT:
-							if(leftFloat > rightFloat)
+							if (leftFloat > rightFloat)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopLE:
-							if(leftFloat <= rightFloat)
+							if (leftFloat <= rightFloat)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopLT:
-							if(leftFloat < rightFloat)
+							if (leftFloat < rightFloat)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
 							break;
 						case AttrOperator.aopNE:
-							if(leftFloat != rightFloat)
+							if (leftFloat != rightFloat)
 								returnValue = returnValue && true;
 							else
 								returnValue = false;
@@ -329,120 +340,96 @@ public class TopFAJoin extends Iterator {
 					case AttrType.attrString:
 						String rightString = outFilter[i].operand2.string;
 						String leftString = tempTuple.getStrFld(colNo);
-					switch(outFilter[i].op.attrOperator){	
-					case AttrOperator.aopEQ:
-						if(leftString.equalsIgnoreCase(rightString))
-							return returnValue;
-						else
-							return !returnValue;
-					case AttrOperator.aopGE:
-						if(leftString.compareToIgnoreCase(rightString)>=0)
-							return returnValue;
-						else
-							return !returnValue;
-					case AttrOperator.aopGT:
-						if(leftString.compareToIgnoreCase(rightString)>0)
-							return returnValue;
-						else
-							return !returnValue;
-					case AttrOperator.aopLE:
-						if(leftString.compareToIgnoreCase(rightString)<=0)
-							return returnValue;
-						else
-							return !returnValue;
-					case AttrOperator.aopLT:
-						if(leftString.compareToIgnoreCase(rightString)<0)
-							return returnValue;
-						else
-							return !returnValue;
-						
-					case AttrOperator.aopNE:
-						if(!(leftString.equalsIgnoreCase(rightString)))
-							return returnValue;
-						else
-							return !returnValue;
-					}
-					break;
+						switch (outFilter[i].op.attrOperator) {
+						case AttrOperator.aopEQ:
+							if (leftString.equalsIgnoreCase(rightString))
+								return returnValue;
+							else
+								return !returnValue;
+						case AttrOperator.aopGE:
+							if (leftString.compareToIgnoreCase(rightString) >= 0)
+								return returnValue;
+							else
+								return !returnValue;
+						case AttrOperator.aopGT:
+							if (leftString.compareToIgnoreCase(rightString) > 0)
+								return returnValue;
+							else
+								return !returnValue;
+						case AttrOperator.aopLE:
+							if (leftString.compareToIgnoreCase(rightString) <= 0)
+								return returnValue;
+							else
+								return !returnValue;
+						case AttrOperator.aopLT:
+							if (leftString.compareToIgnoreCase(rightString) < 0)
+								return returnValue;
+							else
+								return !returnValue;
+						case AttrOperator.aopNE:
+							if (!(leftString.equalsIgnoreCase(rightString)))
+								return returnValue;
+							else
+								return !returnValue;
+						}
+						break;
 					}
 				}
 			}
-		}
-		catch(Exception e){
-			//System.out.println("Exception while processing Tuple in Top Rank Join");
+		} catch (Exception e) {
+			// System.out.println("Exception while processing Tuple in Top Rank Join");
 		}
 		return returnValue;
-	}
+	}*/
 
 	public void createTopKTuples() {
-		int count =0;
+		int count = 0;
 		Tuple fileTuple = new Tuple();
 		RID ridScan = new RID();
-		Tuple scanTuple = new Tuple();
-		AttrType keyAttrType = new AttrType(inputRelations[0][joinColumns[0]].attrType);
-		//System.out.println("in create topK");
-		while(count<knumberOfTuples){
-			for(int relNum=0;relNum<numberOfTables;relNum++){
+		int keySize = 4;
+
+		AttrType keyAttrType = new AttrType(
+				inputRelations[0][joinColumns[0]].attrType);
+		try {
+			tempFile.deleteFile();
+			tempFile = new Heapfile("TempResults.in");
+			if (inputRelations[0][joinColumns[0]].attrType == AttrType.attrString)
+				keySize = 20;
+			tempFileBtf = new BTreeFile("BTreeIndex",
+					inputRelations[0][joinColumns[0]].attrType, keySize, 1);
+
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		while (count < knumberOfTuples) {
+			for (int relNum = 0; relNum < numberOfTables; relNum++) {
 				try {
-					//fileTuple.setHdr((short)inputRelations[relNum].length, inputRelations[relNum], stringSizes[relNum]);
-					fileTuple =  iterators[relNum].get_next();
-					//fileTuple.print(inputRelations[relNum]);
-					if(fileTuple==null)
+					fileTuple = iterators[relNum].get_next();
+					if (fileTuple == null)
 						continue;
-					String strKey ="";
+					String strKey = "";
 					ridScan = ConstantVars.getGlobalRID();
-					String rid = Integer.toString(ridScan.pageNo.pid)+"_"+Integer.toString(ridScan.slotNo);
-					 BTreeFile btf1 = null;
-					 scanTuple.setHdr((short)combinedAttrCount, combinedAttr, combinedStrSizes);
-					 int keySize = 4;
-					    try {
-					    	switch(inputRelations[relNum][joinColumns[relNum]].attrType){
-					    	case AttrType.attrInteger:
-					    		strKey = String.valueOf(fileTuple.getIntFld(joinColumns[relNum]+1));
-					    		keySize = 4;
-					    		break;
-					    	case AttrType.attrString:
-					    		strKey = fileTuple.getStrFld(joinColumns[relNum]+1);
-					    		keySize = 20;
-					    		break;
-					    	}
-					      btf1 = new BTreeFile("BTreeIndex", inputRelations[relNum][joinColumns[relNum]].attrType, keySize, 1); 
-					    }
-					    catch (Exception e) {
-					      e.printStackTrace();
-					      Runtime.getRuntime().exit(1);
-					    }
-					Scan scan = null;
-				    RID sScanRid = new RID();
-				    String sTupleKey ="";
-				    int tupleKey=0;
-				    Tuple temp1 = null;
-				    try {
-				      scan = new Scan(tempFile);
-				      temp1 = scan.getNext(sScanRid);
-				    }
-				    catch (Exception e) {
-				      e.printStackTrace();
-				    }
-				    while ( temp1 != null) {
-				    	scanTuple.tupleCopy(temp1);
-				      try {
-				    	  switch(inputRelations[relNum][joinColumns[relNum]].attrType){
-							case AttrType.attrInteger:
-								tupleKey = scanTuple.getIntFld(combinedAttrCount);
-						    	btf1.insert(new IntegerKey(tupleKey), sScanRid);
-						    	break;
-							case AttrType.attrString:
-								sTupleKey = scanTuple.getStrFld(combinedAttrCount);
-						    	btf1.insert(new StringKey(sTupleKey), sScanRid);
-						    	break;
+					/*String rid = Integer.toString(ridScan.pageNo.pid) + "_"
+							+ Integer.toString(ridScan.slotNo);*/
+					try {
+						switch (inputRelations[relNum][joinColumns[relNum]].attrType) {
+						case AttrType.attrInteger:
+							strKey = String.valueOf(fileTuple
+									.getIntFld(joinColumns[relNum] + 1));
+							break;
+						case AttrType.attrString:
+							strKey = fileTuple
+									.getStrFld(joinColumns[relNum] + 1);
+							break;
 						}
-				    	  temp1 = scan.getNext(sScanRid);
-				      }
-				      catch (Exception e) {
-				    	  e.printStackTrace();
-				      }
-				    }
-				    count+= sequentialAccess(fileTuple, keyAttrType, strKey, relNum, rid);
+					} catch (Exception e) {
+						e.printStackTrace();
+						Runtime.getRuntime().exit(1);
+					}
+					count += sequentialAccess(fileTuple, keyAttrType, strKey,
+							relNum, false);
+					topkMinSum[relNum] = fileTuple.getScore();
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -450,226 +437,409 @@ public class TopFAJoin extends Iterator {
 			}
 		}
 		randomAcess();
-		//fScan.close();
+		writeTopK();
+		get_topK();
 		try {
-			fScan = new FileScan("TempResults.in", combinedAttr , combinedStrSizes, (short)combinedAttrCount, combinedAttrCount, combinedProjection, null);
+			fScan = new FileScan("TempResults.in", combinedAttr,
+					combinedStrSizes, (short) combinedAttrCount,
+					combinedAttrCount, combinedProjection, null);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		Tuple testTuple = new Tuple();
 		try {
-			while((testTuple=fScan.get_next())!=null){
+			while ((testTuple = fScan.get_next()) != null) {
 				testTuple.print(combinedAttr);
 			}
 			fScan.close();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+		}
 	}
 
 	private void randomAcess() {
 		FileScan rScan = null;
 		try {
-				rScan = new FileScan("TempResults.in", combinedAttr , combinedStrSizes, (short)combinedAttrCount, combinedAttrCount, combinedProjection, null);
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} 
+			rScan = new FileScan("TempResults.in", combinedAttr,
+					combinedStrSizes, (short) combinedAttrCount,
+					combinedAttrCount, combinedProjection, null);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		AttrType keyAttrType = inputRelations[0][joinColumns[0]];
 		try {
-			while((mainTuple=rScan.get_next())!=null){
+			while ((mainTuple = rScan.get_next()) != null) {
 				RID ridScan = ConstantVars.getGlobalRID();
 				RID mainRID = new RID();
 				mainRID.pageNo = ridScan.pageNo;
 				mainRID.slotNo = ridScan.slotNo;
-				String strKey = "";
-				if(inputRelations[0][joinColumns[0]].attrType==AttrType.attrInteger){
-					strKey = String.valueOf(mainTuple.getIntFld(combinedAttrCount));
+				if (mainRID.equals(lastAccessedRID)) {
+					break;
 				}
-				else{
+				String strKey = "";
+				if (inputRelations[0][joinColumns[0]].attrType == AttrType.attrInteger) {
+					strKey = String.valueOf(mainTuple
+							.getIntFld(combinedAttrCount));
+				} else {
 					strKey = mainTuple.getStrFld(combinedAttrCount);
 				}
-				String rid = Integer.toString(ridScan.pageNo.pid)+"-"+Integer.toString(ridScan.slotNo);	
-				if(mainTuple.getIntFld(combinedAttrCount-1)!=numberOfTables){
-					for(int i=0;i<numberOfTables;i++){
-						if(relationExists(i, strKey, mainTuple)){
-							continue;
-						}
-						else{
-							CondExpr[] randomExpr = new CondExpr[2];
-							randomExpr[0] = new CondExpr();
-							randomExpr[0].op = new AttrOperator(AttrOperator.aopEQ);
-							randomExpr[0].type1 = new AttrType(AttrType.attrSymbol);
-							randomExpr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[i]+1);
-							if(keyAttrType.attrType==AttrType.attrInteger){
-								randomExpr[0].type2 = new AttrType(AttrType.attrInteger);
-								randomExpr[0].operand2.integer = mainTuple.getIntFld(combinedAttrCount);
-							}
-							else if(keyAttrType.attrType==AttrType.attrString){
-								randomExpr[0].type2 = new AttrType(AttrType.attrString);
-								randomExpr[0].operand2.string = mainTuple.getStrFld(combinedAttrCount);
-							}
-							randomExpr[0].next = null;
-							randomExpr[1] = null;
-							FldSpec[] fSpec = new FldSpec[inputRelations[i].length];
-							for(int j=0;j<inputRelations[i].length;j++){
-								fSpec[j] = new FldSpec(new RelSpec(RelSpec.outer), j+1);
-							}
-							IndexScan iScan = new IndexScan(new IndexType(IndexType.B_Index), fileNames[i], indexFileNames[i], inputRelations[i], stringSizes[i], inputRelations[i].length, inputRelations[i].length, fSpec, randomExpr, joinColumns[i]+1, false);
-							Tuple indexTuple = new Tuple();
-							Heapfile interFile = new Heapfile("interFile.in");
-							RID prevRID = new RID();
-							HashMap<String, Boolean> randomMap = new HashMap<String, Boolean>();
-							while((indexTuple=iScan.get_next())!=null){
-								RID currRID = iScan.getRID();
-								String scanKey= ""+currRID.pageNo.pid+"_"+currRID.slotNo;
-								if(randomMap.containsKey(scanKey)){
-									continue;
-								}
-								else{
-									randomMap.put(scanKey, true);
-								}
-								if(currRID.pageNo.pid==prevRID.pageNo.pid && currRID.slotNo==prevRID.slotNo)
-									continue;
-								prevRID.pageNo.pid = currRID.pageNo.pid;
-								prevRID.slotNo = currRID.slotNo;
-								interFile.insertRecord(indexTuple.getTupleByteArray());
-							}
-							if(interFile.getRecCnt()>0){
-							FileScan fm1 = null;
-							try {
-								fm1 = new FileScan("interFile.in", inputRelations[i], stringSizes[i],
-										(short)inputRelations[i].length, inputRelations[i].length,
-										fSpec, null);
-							} catch (Exception e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-							TupleOrder order = new TupleOrder(TupleOrder.Descending);
-							Iterator topIterator = new Sort(inputRelations[i],(short)inputRelations[i].length,
-										stringSizes[i], fm1, inputRelations[i].length, order, 4, 10);
-							Tuple newTuple = topIterator.get_next();
-							topIterator.close();
-							fm1.close();
-							interFile.deleteFile();
-							//mainTuple.print(combinedAttr);
-							updateTuple(newTuple, mainTuple, i, getTupleOffset(i), rid);
-							mainTuple.setIntFld(combinedAttrCount-1, mainTuple.getIntFld(combinedAttrCount-1)+1);
-							mainTuple.setStrFld(combinedAttrCount, strKey);
-							//mainTuple.print(combinedAttr);
-							//System.out.println("ridScan: "+mainRID.pageNo.pid+"_"+mainRID.slotNo);
-							tempFile.updateRecord(mainRID, mainTuple);
-							}
-						}
-					}
+				/*String rid = Integer.toString(ridScan.pageNo.pid) + "-"
+						+ Integer.toString(ridScan.slotNo);*/
+				if (mainTuple.getIntFld(combinedAttrCount - 1) != numberOfTables) {
+					randomTuple.tupleCopy(mainTuple);
+					tempFile.deleteRecord(ridScan);
+					checkForThreshold(strKey, keyAttrType, mainRID, true, false);
+				} else {
+					relMap = new HashMap<Integer, Boolean>();
+					relMap.put(0, true);
+					randomTuple.tupleCopy(mainTuple);
+					randomTuple.setIntFld(combinedAttrCount - 1, 1);
+					checkForThreshold(strKey, keyAttrType, mainRID, true, true);
+					relMap = new HashMap<Integer, Boolean>();
+					relMap.put(1, true);
+					randomTuple.tupleCopy(mainTuple);
+					randomTuple.setIntFld(combinedAttrCount - 1, 1);
+					checkForThreshold(strKey, keyAttrType, mainRID, true, true);
 				}
-				mainTuple=null;
+				mainTuple = null;
 			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
-		
+		}
+
 	}
 
-	private int sequentialAccess(Tuple fileTuple, AttrType keyAttrType, String strKey, int relNum, String rid) {
-		combinedTuple = new Tuple();
-		try {
-			combinedTuple.setHdr((short)combinedAttrCount, combinedAttr, combinedStrSizes);
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} 
-		int count=0;
+	private boolean checkForThreshold(String strKey, AttrType keyAttrType,
+			RID mainRID, boolean first, boolean afterRandom) {
+		BTreeFile btf1 = null;
+		if (!checkFirst)
+			checkFirst = true;
+		for (int i = 0; i < numberOfTables; i++) {
+			if (!afterRandom && relationExists(i, strKey, randomTuple)) {
+				continue;
+			} else {
+				if (afterRandom && relMap.containsKey(i))
+					continue;
+				if (afterRandom)
+					relMap.put(i, true);
+				try {
+					CondExpr[] randomExpr = new CondExpr[2];
+					randomExpr[0] = new CondExpr();
+					randomExpr[0].op = new AttrOperator(AttrOperator.aopEQ);
+					randomExpr[0].type1 = new AttrType(AttrType.attrSymbol);
+					randomExpr[0].operand1.symbol = new FldSpec(new RelSpec(
+							RelSpec.outer), joinColumns[i] + 1);
+					if (keyAttrType.attrType == AttrType.attrInteger) {
+						randomExpr[0].type2 = new AttrType(AttrType.attrInteger);
+						randomExpr[0].operand2.integer = randomTuple
+								.getIntFld(combinedAttrCount);
+					} else if (keyAttrType.attrType == AttrType.attrString) {
+						randomExpr[0].type2 = new AttrType(AttrType.attrString);
+						randomExpr[0].operand2.string = randomTuple
+								.getStrFld(combinedAttrCount);
+					}
+					randomExpr[0].next = null;
+					randomExpr[1] = null;
+					FldSpec[] fSpec = new FldSpec[inputRelations[i].length];
+					for (int j = 0; j < inputRelations[i].length; j++) {
+						fSpec[j] = new FldSpec(new RelSpec(RelSpec.outer),
+								j + 1);
+					}
+					IndexScan iScan = new IndexScan(new IndexType(
+							IndexType.B_Index), fileNames[i],
+							indexFileNames[i], inputRelations[i],
+							stringSizes[i], inputRelations[i].length,
+							inputRelations[i].length, fSpec, randomExpr,
+							joinColumns[i] + 1, false);
+					Tuple indexTuple = new Tuple();
+					Heapfile interFile = new Heapfile("interFile" + i + ".in");
+					RID prevRID = new RID();
+					HashMap<String, Boolean> randomMap = new HashMap<String, Boolean>();
+					while ((indexTuple = iScan.get_next()) != null) {
+						RID currRID = iScan.getRID();
+						String scanKey = "" + currRID.pageNo.pid + "_"+ currRID.slotNo;
+						if (randomMap.containsKey(scanKey)) {
+							continue;
+						} else {
+							randomMap.put(scanKey, true);
+						}
+						if (currRID.pageNo.pid == prevRID.pageNo.pid && currRID.slotNo == prevRID.slotNo)
+							continue;
+						prevRID.pageNo.pid = currRID.pageNo.pid;
+						prevRID.slotNo = currRID.slotNo;
+						interFile.insertRecord(indexTuple.getTupleByteArray());
+					}
+					if (interFile.getRecCnt() > 0) {
+						FileScan fm1 = null;
+						try {
+							fm1 = new FileScan("interFile" + i + ".in",
+									inputRelations[i], stringSizes[i],
+									(short) inputRelations[i].length,
+									inputRelations[i].length, fSpec, null);
+						} catch (Exception e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						TupleOrder order = new TupleOrder(TupleOrder.Descending);
+						Iterator topIterator = new Sort(inputRelations[i],
+								(short) inputRelations[i].length,
+								stringSizes[i], fm1,
+								inputRelations[i].length - 1, order, 4, 10);
+						Tuple newTuple;
+						while ((newTuple = topIterator.get_next()) != null) {
+						
+							updateTuple(newTuple, randomTuple, i,
+									getTupleOffset(i));
+							randomTuple.setIntFld(combinedAttrCount - 1,randomTuple.getIntFld(combinedAttrCount - 1) + 1);
+							if (randomTuple.getIntFld(combinedAttrCount - 1) == numberOfTables) {
+								float score = 0.0f;
+								for (int relNum = 0; relNum < numberOfTables; relNum++) {
+									score += randomTuple.getFloFld(getTupleOffset(relNum)+ inputRelations[relNum].length- 2);
+								}
+								score = score / numberOfTables;
+								if (afterRandom) {
+									randomTuple.setFloFld(combinedAttrCount - 2, score);
+									boolean checkFlag = checkTupleExists(randomTuple, strKey, keyAttrType,"TempResults.in", "BTreeIndex");
+									if (score >= topKmin && !checkFlag) {
+										RID rid = tempFile.insertRecord(randomTuple.getTupleByteArray());
+										insertIntoBTree(strKey, rid,keyAttrType);
+										randomTuple.setIntFld(combinedAttrCount - 1,randomTuple.getIntFld(combinedAttrCount - 1) - 1);
+									} else {
+										randomTuple.setIntFld(combinedAttrCount - 1,randomTuple.getIntFld(combinedAttrCount - 1) - 1);
+									}
+								} else {
+									randomTuple.setFloFld(combinedAttrCount - 2, score);
+									RID rid = tempFile.insertRecord(randomTuple.getTupleByteArray());
+									insertIntoBTree(strKey, rid, keyAttrType);
+									randomTuple.setIntFld(combinedAttrCount - 1,randomTuple.getIntFld(combinedAttrCount - 1) - 1);
+								}
+							} else {
+								if (!afterRandom) {
+									checkForThreshold(strKey,keyAttrType, mainRID, false, false);
+								} else {
+									checkForThreshold(strKey,keyAttrType, mainRID, false, true);
+								}
+								randomTuple.setIntFld(combinedAttrCount - 1,randomTuple.getIntFld(combinedAttrCount - 1) - 1);
+							}
+						}
+						topIterator.close();
+						fm1.close();
+						interFile.deleteFile();
+						return false;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	private boolean checkTupleExists(Tuple fileTuple, String strKey,
+			AttrType keyAttrType, String fileName, String indexName) {
+		// TODO Auto-generated method stub
 		CondExpr[] randomExpr = new CondExpr[2];
 		randomExpr[0] = new CondExpr();
 		randomExpr[0].op = new AttrOperator(AttrOperator.aopEQ);
 		randomExpr[0].type1 = new AttrType(AttrType.attrSymbol);
-		randomExpr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer), joinColumns[relNum]+1);
-		if(keyAttrType.attrType==AttrType.attrInteger){
+		randomExpr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer),
+				combinedAttrCount);
+		if (keyAttrType.attrType == AttrType.attrInteger) {
 			randomExpr[0].type2 = new AttrType(AttrType.attrInteger);
 			randomExpr[0].operand2.integer = Integer.parseInt(strKey);
-		}
-		else if(keyAttrType.attrType==AttrType.attrString){
+		} else if (keyAttrType.attrType == AttrType.attrString) {
 			randomExpr[0].type2 = new AttrType(AttrType.attrString);
 			randomExpr[0].operand2.string = strKey;
 		}
 		randomExpr[0].next = null;
 		randomExpr[1] = null;
-	    IndexScan tempScan=null;
-	    RID prevRID = new RID();
+		IndexScan tempScan = null;
+		RID prevRID = new RID();
+		HashMap<String, Boolean> randomMap = new HashMap<String, Boolean>();
 		try {
-			tempScan = new IndexScan(new IndexType(IndexType.B_Index), "TempResults.in", "BTreeIndex", combinedAttr, combinedStrSizes, combinedAttrCount, combinedAttrCount, combinedProjection, randomExpr, combinedAttrCount, false);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} 
-		boolean keyExists = false;
-	    try {
-	    	HashMap<String, Boolean> randomMap = new HashMap<String, Boolean>();
-			while((t=tempScan.get_next())!=null){
+			tempScan = new IndexScan(new IndexType(IndexType.B_Index),
+					fileName, indexName, combinedAttr, combinedStrSizes,
+					combinedAttrCount, combinedAttrCount, combinedProjection,
+					randomExpr, combinedAttrCount, false);
+			Tuple t = null;
+			while ((t = tempScan.get_next()) != null) {
 				RID currRID = tempScan.getRID();
-				String scanKey= ""+currRID.pageNo.pid+"_"+currRID.slotNo;
-				if(randomMap.containsKey(scanKey)){
+				String scanKey = "" + currRID.pageNo.pid + "_" + currRID.slotNo;
+				if (randomMap.containsKey(scanKey)) {
 					continue;
-				}
-				else{
+				} else {
 					randomMap.put(scanKey, true);
 				}
-				if(currRID.pageNo.pid==prevRID.pageNo.pid && currRID.slotNo==prevRID.slotNo)
+				if (currRID.pageNo.pid == prevRID.pageNo.pid
+						&& currRID.slotNo == prevRID.slotNo)
 					continue;
 				prevRID.pageNo.pid = currRID.pageNo.pid;
 				prevRID.slotNo = currRID.slotNo;
-				keyExists = true;
-				combinedTuple.tupleCopy(t);
-				if(relationExists(relNum, strKey, combinedTuple)){
-					updateTuple(fileTuple, combinedTuple, relNum, getTupleOffset(relNum), rid);
-					RID rs = tempFile.insertRecord(combinedTuple.getTupleByteArray());
+				int count = 0;
+				for (int relNum = 0; relNum < numberOfTables; relNum++) {
+					int offset = getTupleOffset(relNum)
+							+ inputRelations[relNum].length - 1;
+					if ((t.getStrFld(offset)
+							.equals(fileTuple.getStrFld(offset)))) {
+						count++;
+					}
 				}
-				else{
-					RID updateRid = ConstantVars.getGlobalRID();
-					updateTuple(fileTuple, combinedTuple, relNum, getTupleOffset(relNum), rid);
-					combinedTuple.setIntFld(combinedAttrCount-1, combinedTuple.getIntFld(combinedAttrCount-1)+1);
-					tempFile.updateRecord(updateRid, combinedTuple);
-				}
-				if(combinedTuple.getIntFld(combinedAttrCount-1)==numberOfTables){
-					//combinedTuple.print(combinedAttr);
-					count++;
+				if (count == numberOfTables) {
+					return true;
 				}
 			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
-		if(!keyExists){
-			updateTuple(fileTuple, combinedTuple, relNum, getTupleOffset(relNum), rid);
-			try {
-				combinedTuple.setIntFld(combinedAttrCount-1, combinedTuple.getIntFld(combinedAttrCount-1)+1);
-				if(keyAttrType.attrType==AttrType.attrInteger){
-					combinedTuple.setIntFld(combinedAttrCount, Integer.parseInt(strKey));
+		}
+		return false;
+	}
+
+	private int sequentialAccess(Tuple fileTuple, AttrType keyAttrType,
+			String strKey, int relNum, boolean updateFlag) {
+		combinedTuple = new Tuple();
+		RID insertRid = new RID();
+		try {
+			combinedTuple.setHdr((short) combinedAttrCount, combinedAttr,
+					combinedStrSizes);
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		int count = 0;
+		CondExpr[] randomExpr = new CondExpr[2];
+		randomExpr[0] = new CondExpr();
+		randomExpr[0].op = new AttrOperator(AttrOperator.aopEQ);
+		randomExpr[0].type1 = new AttrType(AttrType.attrSymbol);
+		randomExpr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer),
+				combinedAttrCount);
+		if (keyAttrType.attrType == AttrType.attrInteger) {
+			randomExpr[0].type2 = new AttrType(AttrType.attrInteger);
+			randomExpr[0].operand2.integer = Integer.parseInt(strKey);
+		} else if (keyAttrType.attrType == AttrType.attrString) {
+			randomExpr[0].type2 = new AttrType(AttrType.attrString);
+			randomExpr[0].operand2.string = strKey;
+		}
+		randomExpr[0].next = null;
+		randomExpr[1] = null;
+		IndexScan tempScan = null;
+		RID prevRID = new RID();
+		try {
+			tempScan = new IndexScan(new IndexType(IndexType.B_Index),
+					"TempResults.in", "BTreeIndex", combinedAttr,
+					combinedStrSizes, combinedAttrCount, combinedAttrCount,
+					combinedProjection, randomExpr, combinedAttrCount, false);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		boolean keyExists = false;
+		try {
+			HashMap<String, Boolean> randomMap = new HashMap<String, Boolean>();
+			HashMap<String, Boolean> ridMap = new HashMap<String, Boolean>();
+			while ((t = tempScan.get_next()) != null) {
+				RID currRID = tempScan.getRID();
+				String scanKey = "" + currRID.pageNo.pid + "_" + currRID.slotNo;
+				if (randomMap.containsKey(scanKey)) {
+					continue;
+				} else {
+					randomMap.put(scanKey, true);
 				}
-				else if(keyAttrType.attrType==AttrType.attrString){
+				if (currRID.pageNo.pid == prevRID.pageNo.pid
+						&& currRID.slotNo == prevRID.slotNo)
+					continue;
+				prevRID.pageNo.pid = currRID.pageNo.pid;
+				prevRID.slotNo = currRID.slotNo;
+				keyExists = true;
+				combinedTuple.tupleCopy(t);
+				if (relationExists(relNum, strKey, combinedTuple)) {
+					String relRid = getRid(relNum, combinedTuple);
+					if (ridMap.containsKey(relRid)) {
+						continue;
+					} else {
+						ridMap.put(relRid, true);
+					}
+					updateTuple(fileTuple, combinedTuple, relNum,
+							getTupleOffset(relNum));
+					insertRid = tempFile.insertRecord(combinedTuple
+							.getTupleByteArray());
+					insertIntoBTree(strKey, insertRid, keyAttrType);
+				} else {
+					insertRid = ConstantVars.getGlobalRID();
+					updateTuple(fileTuple, combinedTuple, relNum,
+							getTupleOffset(relNum));
+					combinedTuple.setIntFld(combinedAttrCount - 1,
+							combinedTuple.getIntFld(combinedAttrCount - 1) + 1);
+					tempFile.updateRecord(insertRid, combinedTuple);
+				}
+				if (combinedTuple.getIntFld(combinedAttrCount - 1) == numberOfTables) {
+					float score = 0.0f;
+					for (int i = 0; i < numberOfTables; i++) {
+						score += combinedTuple.getFloFld(getTupleOffset(i)
+								+ inputRelations[i].length - 2);
+					}
+					score = score / numberOfTables;
+					combinedTuple.setFloFld(combinedAttrCount - 2, score);
+					if (!updateFlag) {
+						tempFile.updateRecord(insertRid, combinedTuple);
+						count++;
+						if (topKmin > score)
+							topKmin = score;
+						lastAccessedRID = insertRid;
+					} else {
+						if (score > topKmin) {
+							outFile.insertRecord(combinedTuple
+									.getTupleByteArray());
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if (!keyExists) {
+			updateTuple(fileTuple, combinedTuple, relNum,
+					getTupleOffset(relNum));
+			try {
+				combinedTuple.setIntFld(combinedAttrCount - 1,
+						combinedTuple.getIntFld(combinedAttrCount - 1) + 1);
+				if (keyAttrType.attrType == AttrType.attrInteger) {
+					combinedTuple.setIntFld(combinedAttrCount,
+							Integer.parseInt(strKey));
+				} else if (keyAttrType.attrType == AttrType.attrString) {
 					combinedTuple.setStrFld(combinedAttrCount, strKey);
 				}
-				tempFile.insertRecord(combinedTuple.getTupleByteArray());
+				if (!updateFlag) {
+					insertRid = tempFile.insertRecord(combinedTuple
+							.getTupleByteArray());
+					insertIntoBTree(strKey, insertRid, keyAttrType);
+				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			} 
-			
+			}
 		}
 		// TODO Auto-generated method stub
 		return count;
 	}
 
-	public boolean relationExists(int relNum, String strKey, Tuple jTuple){
-		int keyOffset = getTupleOffset(relNum);
-		if(inputRelations[0][joinColumns[0]].attrType==AttrType.attrInteger){
+	private String getRid(int relNum, Tuple fileTuple) {
+		StringBuffer rid = new StringBuffer();
+		for (int i = 0; i < inputRelations.length; i++) {
+			if (i == relNum)
+				continue;
+			int ridOffset = getTupleOffset(i) + inputRelations[i].length - 1;
 			try {
-				if(jTuple.getIntFld(keyOffset)==Integer.parseInt(strKey))
-					return true;
+				if (!fileTuple.getStrFld(ridOffset).equals("")) {
+					rid.append(fileTuple.getStrFld(ridOffset));
+					rid.append("_");
+				}
 			} catch (FieldNumberOutOfBoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -678,9 +848,26 @@ public class TopFAJoin extends Iterator {
 				e.printStackTrace();
 			}
 		}
-		else if(inputRelations[0][joinColumns[0]].attrType==AttrType.attrString){
+		// TODO Auto-generated method stub
+		return rid.toString();
+	}
+
+	public boolean relationExists(int relNum, String strKey, Tuple jTuple) {
+		int keyOffset = getTupleOffset(relNum);
+		if (inputRelations[0][joinColumns[0]].attrType == AttrType.attrInteger) {
 			try {
-				if((jTuple.getStrFld(keyOffset).equals(strKey)))
+				if (jTuple.getIntFld(keyOffset) == Integer.parseInt(strKey))
+					return true;
+			} catch (FieldNumberOutOfBoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} else if (inputRelations[0][joinColumns[0]].attrType == AttrType.attrString) {
+			try {
+				if ((jTuple.getStrFld(keyOffset).equals(strKey)))
 					return true;
 			} catch (FieldNumberOutOfBoundException e) {
 				// TODO Auto-generated catch block
@@ -692,7 +879,24 @@ public class TopFAJoin extends Iterator {
 		}
 		return false;
 	}
-	
+
+	public void insertIntoBTree(String strKey, RID rid, AttrType keyAttrType) {
+		try {
+			switch (keyAttrType.attrType) {
+			case AttrType.attrInteger:
+				tempFileBtf.insert(new IntegerKey(Integer.parseInt(strKey)),
+						rid);
+				break;
+			case AttrType.attrString:
+				tempFileBtf.insert(new StringKey(strKey), rid);
+				break;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
 	public void close() throws JoinsException, IOException, IndexException {
 		if (!closeFlag) {
 
@@ -721,39 +925,81 @@ public class TopFAJoin extends Iterator {
 			return -1;
 	}
 
-	public void get_topK(String inputFile, Tuple outTuple) {
-		short attrLength = (short)outTuple.attr_Types.length;
-		FldSpec[] tProjection = new FldSpec[attrLength];
-		for (int i = 0; i < attrLength; i++)
-			tProjection[i] = new FldSpec(new RelSpec(RelSpec.outer), i + 1);
+	public void get_topK() {
+		FldSpec[] tProjection = new FldSpec[proj_list.length + 1];
+		AttrType[] attrType = new AttrType[proj_list.length + 1];
+		ArrayList<Short> stringSizes = new ArrayList<Short>();
+		for (int i = 0; i < tProjection.length - 1; i++) {
+			tProjection[i] = new FldSpec(new RelSpec(RelSpec.outer),
+					getTupleOffset(proj_list[i].relation.key)
+							+ proj_list[i].offset - 1);
+			/*int p = getTupleOffset(proj_list[i].relation.key)
+					+ proj_list[i].offset - 1;*/
+			attrType[i] = inputRelations[proj_list[i].relation.key][proj_list[i].offset - 1];
+			if (attrType[i].attrType == AttrType.attrString) {
+				stringSizes.add((short) 20);
+			}
+		}
+		attrType[proj_list.length] = new AttrType(AttrType.attrReal);
+		tProjection[proj_list.length] = new FldSpec(new RelSpec(RelSpec.outer),
+				combinedAttrCount - 2);
+		short[] strSizes = new short[stringSizes.size()];
+		for (int i = 0; i < stringSizes.size(); i++) {
+			strSizes[i] = stringSizes.get(i);
+		}
 		FileScan fm1 = null;
 		try {
-			fm1 = new FileScan(inputFile, outTuple.attr_Types, outTuple.string_sizes,
-					attrLength, attrLength,
-					tProjection, null);
-		} catch (FileScanException e) {
+			fm1 = new FileScan("TopRankJoin.in", combinedAttr,
+					combinedStrSizes, (short) combinedAttrCount,
+					attrType.length, tProjection, null);
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (TupleUtilsException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidRelation e) {
+		}
+		Tuple tuple1 = null;
+		int topK = knumberOfTuples;
+		while (topK > 0) {
+			try {
+				if ((tuple1 = fm1.get_next()) != null) {
+					tuple1.print(attrType);
+				}
+				topK--;
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		try {
+			topKmin = tuple1.getFloFld(attrType.length);
+		} catch (FieldNumberOutOfBoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
 
+	private void writeTopK() {
+		FileScan fm1 = null;
+
+		try {
+			outFile.deleteFile();
+			outFile = new Heapfile("TopRankJoin.in");
+			fm1 = new FileScan("TempResults.in", combinedAttr,
+					combinedStrSizes, (short) combinedAttrCount,
+					combinedAttrCount, combinedProjection, null);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		TupleOrder order = new TupleOrder(TupleOrder.Descending);
 		Iterator topIterator = null;
 		try {
-			topIterator = new Sort(outTuple.attr_Types,attrLength,
-					outTuple.string_sizes, fm1, outTuple.attrSizes, order, 4, n_buf_pgs);
-		} catch (SortException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
+			topIterator = new Sort(combinedAttr, (short) combinedAttrCount,
+					combinedStrSizes, fm1, combinedAttrCount - 2, order, 4,
+					n_buf_pgs);
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -762,155 +1008,329 @@ public class TopFAJoin extends Iterator {
 		while (topK > 0) {
 			try {
 				if ((tuple1 = topIterator.get_next()) != null) {
-					tuple1.print(outTuple.attr_Types);
+					outFile.insertRecord(tuple1.getTupleByteArray());
+					String key = null;
+					if (inputRelations[0][0].attrType == AttrType.attrInteger) {
+						key = String.valueOf(tuple1
+								.getIntFld(combinedAttrCount));
+					} else if (inputRelations[0][0].attrType == AttrType.attrString) {
+						key = tuple1.getStrFld(combinedAttrCount);
+					}
+					for (int relNum = 0; relNum < numberOfTables; relNum++) {
+						int offset = getTupleOffset(relNum)
+								+ inputRelations[relNum].length - 2;
+						ArrayList<Float> scoreArray = new ArrayList<Float>();
+						Float score = 1.0f;
+						if (keyMap.containsKey(key)) {
+							scoreArray = keyMap.get(key);
+							if (relNum < scoreArray.size())
+								score = scoreArray.get(relNum);
+						}
+						if (score > tuple1.getFloFld(offset)) {
+							if (keyMap.containsKey(key)
+									&& relNum < scoreArray.size())
+								scoreArray
+										.set(relNum, tuple1.getFloFld(offset));
+							else
+								scoreArray.add(tuple1.getFloFld(offset));
+							keyMap.put(key, scoreArray);
+						}
+					}
 				}
 				topK--;
-			}  catch (Exception e) {
+			} catch (Exception e) {
 				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+	}
+
+	private int getTupleOffset(int tableIndex) {
+		int offset = 0;
+		if (tableIndex == 0) {
+			return 1;
+		}
+		for (int i = 0; i < tableIndex; i++) {
+			offset += inputRelations[i].length;
+		}
+		return offset + 1;
+
+	}
+
+	private void updateTuple(Tuple inTuple, Tuple outTuple, int tableIndex,
+			int offset) {
+		int fieldCount = 1;
+		int attrLength = inputRelations[tableIndex].length;
+		for (int tField = 1; tField <= attrLength; tField++) {
+			try {
+				switch (inputRelations[tableIndex][tField - 1].attrType) {
+				case AttrType.attrInteger:
+					outTuple.setIntFld(offset, inTuple.getIntFld(fieldCount));
+					fieldCount++;
+					offset++;
+					break;
+				case AttrType.attrReal:
+					outTuple.setFloFld(offset, inTuple.getFloFld(fieldCount));
+					fieldCount++;
+					offset++;
+					break;
+				case AttrType.attrString:
+					outTuple.setStrFld(offset, inTuple.getStrFld(fieldCount));
+					fieldCount++;
+					offset++;
+					break;
+				}
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 	}
 
-
-	private int getTupleOffset(int tableIndex){
-		int offset = 0;
-		if(tableIndex==0){
-			return 1;
+	public void updateFA(String[] updateIndexNameList, String[] updateFiles,
+			IndexType[] update_index, Iterator[] updateIteratorList) {
+		int count = 0;
+		updateFileNames = updateFiles;
+		updateIndexNames = updateIndexNameList;
+		String strKey = null;
+		AttrType keyAttrType = inputRelations[0][joinColumns[0]];
+		Scan scan = null;
+		RID sScanRid = new RID();
+		String sTupleKey = "";
+		int tupleKey = 0;
+		Tuple temp1 = null;
+		int keySize = 4;
+		Tuple scanTuple = new Tuple();
+		if (inputRelations[0][joinColumns[0]].attrType == AttrType.attrString) {
+			keySize = 20;
 		}
-		for(int i=0;i<tableIndex;i++){
-			offset+=inputRelations[i].length;
+		try {
+			scanTuple.setHdr((short) combinedAttrCount, combinedAttr,
+					combinedStrSizes);
+			insertIndex = new BTreeFile("BTreeIndexInsert",
+					inputRelations[0][joinColumns[0]].attrType, keySize, 1);
+			scan = new Scan(outFile);
+			temp1 = scan.getNext(sScanRid);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		return offset+1;
-
-	}
-
-	private void updateTuple(Tuple inTuple,Tuple outTuple, int tableIndex, int offset, String rid){
-		int fieldCount =1;
-		Tuple Jtuple = new Tuple();
-		int attrLength = inputRelations[tableIndex].length;
-		for(int tField=1;tField<=attrLength;tField++){
-			switch(inputRelations[tableIndex][tField-1].attrType){
-			case AttrType.attrInteger:
-				try {
-					outTuple.setIntFld(offset,
-							inTuple.getIntFld(fieldCount));
-					fieldCount++;
-					offset++;
-				} catch (FieldNumberOutOfBoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+		while (temp1 != null) {
+			scanTuple.tupleCopy(temp1);
+			try {
+				switch (inputRelations[0][joinColumns[0]].attrType) {
+				case AttrType.attrInteger:
+					tupleKey = scanTuple.getIntFld(combinedAttrCount);
+					insertIndex.insert(new IntegerKey(tupleKey), sScanRid);
+					break;
+				case AttrType.attrString:
+					sTupleKey = scanTuple.getStrFld(combinedAttrCount);
+					insertIndex.insert(new StringKey(sTupleKey), sScanRid);
+					break;
 				}
-				break;
-			case AttrType.attrReal:
-				try {
-					outTuple.setFloFld(offset, inTuple.getFloFld(fieldCount));
-					fieldCount++;
-					offset++;
-				} catch (FieldNumberOutOfBoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				break;
-			case AttrType.attrString:
-				try {
-					outTuple.setStrFld(offset, inTuple.getStrFld(fieldCount));
-					fieldCount++;
-					offset++;
-				} catch (FieldNumberOutOfBoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				break;
+				temp1 = scan.getNext(sScanRid);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
+		for (int i = 0; i < numberOfTables; i++) {
+			if (!updateFileNames[i].equals(""))
+				count++;
+		}
+		int relCount = 0;
+		while (relCount < count) {
+			for (int relNum = 0; relNum < numberOfTables; relNum++) {
+				if (updateIteratorList[relNum] != null) {
+					try {
+						Tuple fileTuple = updateIteratorList[relNum].get_next();
+						if (fileTuple == null) {
+							relCount++;
+							if (count == relCount) {
+								break;
+							}
+							continue;
+						}
+						if (inputRelations[relNum][joinColumns[relNum]].attrType == AttrType.attrInteger) {
+							strKey = String.valueOf(fileTuple
+									.getIntFld(joinColumns[relNum] + 1));
+						} else if (inputRelations[relNum][joinColumns[relNum]].attrType == AttrType.attrString) {
+							strKey = fileTuple
+									.getStrFld(joinColumns[relNum] + 1);
+						}
+						if (keyMap.containsKey(strKey)) {
+							ArrayList<Float> scoreArray = keyMap.get(strKey);
+							if (fileTuple
+									.getFloFld(inputRelations[relNum].length - 1) < scoreArray
+									.get(relNum)) {
+								continue;
+							}
+							updateTopRank(fileTuple, keyAttrType, strKey,
+									relNum);
+						} else {
+							sequentialAccess(fileTuple, keyAttrType, strKey,
+									relNum, true);
+						}
+
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		updateTopK();
 	}
 
-
-	private boolean doesTupleExists(Tuple t, int keyOffset, boolean tupleExists, AttrType keyAttr, Object key){
-		if(keyOffset==1){
-			int counter = 0;
-			try{
-				for(int i=0;i<inputRelations[0].length;i++){
-					switch(inputRelations[0][i].attrType){
+	public void updateTopRank(Tuple fileTuple, AttrType keyAttrType,
+			String strKey, int relNum) {
+		CondExpr[] randomExpr = new CondExpr[2];
+		randomExpr[0] = new CondExpr();
+		randomExpr[0].op = new AttrOperator(AttrOperator.aopEQ);
+		randomExpr[0].type1 = new AttrType(AttrType.attrSymbol);
+		randomExpr[0].operand1.symbol = new FldSpec(new RelSpec(RelSpec.outer),
+				combinedAttrCount);
+		if (keyAttrType.attrType == AttrType.attrInteger) {
+			randomExpr[0].type2 = new AttrType(AttrType.attrInteger);
+			randomExpr[0].operand2.integer = Integer.parseInt(strKey);
+		} else if (keyAttrType.attrType == AttrType.attrString) {
+			randomExpr[0].type2 = new AttrType(AttrType.attrString);
+			randomExpr[0].operand2.string = strKey;
+		}
+		randomExpr[0].next = null;
+		randomExpr[1] = null;
+		try {
+			IndexScan iScan = new IndexScan(new IndexType(IndexType.B_Index),
+					"TopRankJoin.in", "BTreeIndexInsert", combinedAttr,
+					combinedStrSizes, combinedAttrCount, combinedAttrCount,
+					combinedProjection, randomExpr, combinedAttrCount, false);
+			Tuple indexTuple = new Tuple();
+			indexTuple.setHdr((short) combinedAttrCount, combinedAttr,
+					combinedStrSizes);
+			RID prevRID = new RID();
+			HashMap<String, Boolean> randomMap = new HashMap<String, Boolean>();
+			while ((indexTuple = iScan.get_next()) != null) {
+				indexTuple.print(combinedAttr);
+				RID currRID = iScan.getRID();
+				String scanKey = "" + currRID.pageNo.pid + "_" + currRID.slotNo;
+				if (randomMap.containsKey(scanKey)) {
+					continue;
+				} else {
+					randomMap.put(scanKey, true);
+				}
+				if (currRID.pageNo.pid == prevRID.pageNo.pid && currRID.slotNo == prevRID.slotNo)
+					continue;
+				prevRID.pageNo.pid = currRID.pageNo.pid;
+				prevRID.slotNo = currRID.slotNo;
+				updateTuple(fileTuple, indexTuple, relNum,
+						getTupleOffset(relNum));
+				float score = 0.0f;
+				for (int i = 0; i < numberOfTables; i++) {
+					score += indexTuple.getFloFld(getTupleOffset(i)+ inputRelations[i].length - 2);
+				}
+				score = score / numberOfTables;
+				indexTuple.setFloFld(combinedAttrCount - 2, score);
+				if (score > topKmin && !(checkTupleExists(indexTuple, strKey, keyAttrType,"TopRankJoin.in", "BTreeIndexInsert"))) {
+					RID rid = outFile.insertRecord(indexTuple.getTupleByteArray());
+					switch (keyAttrType.attrType) {
 					case AttrType.attrInteger:
-						if(t.getIntFld(i+1)!=0){
-							counter++;
-						}
-						break;
-					case AttrType.attrReal:
-						if(t.getFloFld(i+1)!=0.0){
-							counter++;
-						}
+						insertIndex.insert(
+								new IntegerKey(Integer.parseInt(strKey)), rid);
 						break;
 					case AttrType.attrString:
-						if(!(t.getStrFld(i+1).equals(""))){
-							counter++;
-						}
+						insertIndex.insert(new StringKey(strKey), rid);
 						break;
 					}
 				}
-				if(counter==1)
-					return false;
-				else
-					return true;
 			}
-			catch(Exception e){
-				System.out.println("Exception caught at doesTupleExists");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void deleteFA(String[] deleteIndexNameList, String[] deleteFiles,
+			AttrType[][] updateAttrTypeList, short[][] updateStrSizesList,
+			IndexType[] delete_index, Iterator[] deleteIteratorList) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public void updateTopK() {
+		FileScan fm1 = null;
+		Heapfile finalFile = null;
+		try {
+			finalFile = new Heapfile("UpdateTop.in");
+			fm1 = new FileScan("TopRankJoin.in", combinedAttr,
+					combinedStrSizes, (short) combinedAttrCount,
+					combinedAttrCount, combinedProjection, null);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		TupleOrder order = new TupleOrder(TupleOrder.Descending);
+		Iterator topIterator = null;
+		try {
+			topIterator = new Sort(combinedAttr, (short) combinedAttrCount,
+					combinedStrSizes, fm1, combinedAttrCount - 2, order, 4,
+					n_buf_pgs);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		Tuple tuple1;
+		int topK = knumberOfTuples;
+		while (topK > 0) {
+			try {
+				if ((tuple1 = topIterator.get_next()) != null) {
+					tuple1.print(combinedAttr);
+					finalFile.insertRecord(tuple1.getTupleByteArray());
+				}
+				topK--;
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
-		else{
-			switch(keyAttr.attrType){
-			case AttrType.attrInteger:
-				try {
-					if((Integer)key==t.getIntFld(keyOffset)){
-						return true;
-					}
-					return false;
-				} catch (FieldNumberOutOfBoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			case AttrType.attrReal:
-				try {
-					if((Float)key==t.getFloFld(keyOffset)){
-						return true;
-					}
-					return false;
-				} catch (FieldNumberOutOfBoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			case AttrType.attrString:
-				try {
-					AttrType[] attr = t.attr_Types;
-					if(key.toString().equals(t.getStrFld(keyOffset))){
-						return true;
-					}
-					return false;
-				} catch (FieldNumberOutOfBoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+		FldSpec[] tProjection = new FldSpec[proj_list.length + 1];
+		AttrType[] attrType = new AttrType[proj_list.length + 1];
+		ArrayList<Short> stringSizes = new ArrayList<Short>();
+		for (int i = 0; i < tProjection.length - 1; i++) {
+			tProjection[i] = new FldSpec(new RelSpec(RelSpec.outer),
+					getTupleOffset(proj_list[i].relation.key)
+							+ proj_list[i].offset - 1);
+			attrType[i] = inputRelations[proj_list[i].relation.key][proj_list[i].offset - 1];
+			if (attrType[i].attrType == AttrType.attrString) {
+				stringSizes.add((short) 20);
 			}
 		}
-		return false;
+		attrType[proj_list.length] = new AttrType(AttrType.attrReal);
+		tProjection[proj_list.length] = new FldSpec(new RelSpec(RelSpec.outer),
+				combinedAttrCount - 2);
+		short[] strSizes = new short[stringSizes.size()];
+		for (int i = 0; i < stringSizes.size(); i++) {
+			strSizes[i] = stringSizes.get(i);
+		}
+		FileScan fm2 = null;
+		try {
+			fm2 = new FileScan("UpdateTop.in", combinedAttr, combinedStrSizes,
+					(short) combinedAttrCount, attrType.length, tProjection,
+					null);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		Tuple finalTuple = null;
+		topK = knumberOfTuples;
+
+		while (topK > 0) {
+			try {
+				if ((finalTuple = fm2.get_next()) != null) {
+					finalTuple.print(attrType);
+				}
+				topK--;
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
 	}
 }

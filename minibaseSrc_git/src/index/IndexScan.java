@@ -209,21 +209,19 @@ public class IndexScan extends Iterator {
       // not index_only, need to return the whole tuple
       rid = ((LeafData)nextentry.data).getData();
       try {
-	tuple1 = f.getRecord(rid);
-	//System.out.println("Index RID Page No : " + rid.pageNo + " Slot No: " + rid.slotNo);
-	ConstantVars.setGlobalRID(rid);
+    	  tuple1 = f.getRecord(rid);
+    	  //System.out.println("Index RID Page No : " + rid.pageNo + " Slot No: " + rid.slotNo);
+    	  ConstantVars.setGlobalRID(rid);
       }
       catch (Exception e) {
 	throw new IndexException(e, "IndexScan.java: getRecord failed");
       }
-      
       try {
-	tuple1.setHdr((short) _noInFlds, _types, _s_sizes);
+    	  tuple1.setHdr((short) _noInFlds, _types, _s_sizes);
       }
       catch (Exception e) {
-	throw new IndexException(e, "IndexScan.java: Heapfile error");
+    	  throw new IndexException(e, "IndexScan.java: Heapfile error");
       }
-    
       boolean eval;
       try {
 	eval = PredEval.Eval(_selects, tuple1, null, _types, null);

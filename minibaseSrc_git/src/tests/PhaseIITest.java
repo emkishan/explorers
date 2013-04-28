@@ -86,11 +86,14 @@ public class PhaseIITest implements GlobalConst{
 			//System.out.println("Enter number of tables to be joined");
 			int numOfTables = 2;
 			AttrType [][] attrTypeList = new AttrType[numOfTables][];
+			AttrType [][] updateAttrTypeList = new AttrType[numOfTables][];
 			int [] numOfColsList = new int[numOfTables];
 			short [][] stringSizesList = new short[numOfTables][];
 			int [] joinedColList = new int[numOfTables];
 			int [] joinedColDataTypeList = new int[numOfTables]; 
 			Iterator [] iteratorList = new Iterator[numOfTables];
+			Iterator [] updateIteratorList = new Iterator[numOfTables];
+			Iterator [] deleteIteratorList = new Iterator[numOfTables];
 			AttrType [] indexAttrType = new AttrType[numOfTables];
 			String [] indexNameList = new String[numOfTables];
 			String [] tableNameList = new String[numOfTables];
@@ -753,11 +756,7 @@ public class PhaseIITest implements GlobalConst{
 					Ssizes[e] = 30; 
 					
 					stringSizesList[k] = Ssizes;
-					
-					//Set length for the sort field i.e the field to be joined
-					
 					switch(Stypes[joinColNumber-1].attrType){
-						
 						case 0: joinedColDataTypeList[k] = Ssizes[0];
 					        break;
 					
@@ -770,9 +769,6 @@ public class PhaseIITest implements GlobalConst{
 						default: System.out.println("Invalid Attribute Data type");
 							 System.exit(0);
 					}
-					
-					//System.out.println("Data type of joined column ="+joinedColDataTypeList[k]);
-					
 					
 					try {
 						t.setHdr((short)(numOfColms),Stypes, Ssizes);
@@ -793,30 +789,19 @@ public class PhaseIITest implements GlobalConst{
 							System.out.println("Token Found [" + res[i] + "]");
 							AttrType attr= Stypes[i];
 							int type = attr.attrType;
-							//System.out.println("type = "+type);
 							switch(type){
 					   			case AttrType.attrString: t.setStrFld(i+1, res[i]);
-					   			//System.out.println("t.getStrFld(i+1)="+t.getStrFld(i+1));
 					   				break;
 					   			case AttrType.attrInteger: t.setIntFld(i+1, Integer.parseInt(res[i]));
-					   				//System.out.println("t.getIntFld(i+1)="+t.getIntFld(i+1));
 					   				break;
 					   			case AttrType.attrReal: t.setFloFld(i+1, Float.parseFloat(res[i]));
 					   				break;
 							}
-							//System.out.println("i =" + i);
-							//System.out.println("res.length =" + res.length);
-							//System.out.println("t.data = "+t.data);
-															   							
 						}
 						if(i==numOfColms){
-							//System.out.println("Score =" + res[i]);
 							t.setScore(Float.parseFloat(res[i]));
 						}
-						//System.out.println("t.data = "+t.data);
-						//t.print(Stypes);
 						rid = topFile.insertRecord(t.getTupleByteArray());
-						//t.print(Stypes);
 						res = parser.splitLine();
 					}
 					excelDocumentStream.close();
@@ -827,37 +812,23 @@ public class PhaseIITest implements GlobalConst{
 					
 						Sprojection[q] = new FldSpec(new RelSpec(RelSpec.outer), q+1);
 					}  
-					
 					FileScan am = null;
-					
 				    try {
 				      am  = new FileScan(tableName+".in", Stypes, Ssizes, 
 								  (short)numOfColsList[k], (short)numOfColsList[k],
 								  Sprojection, null);
-				      
-				      /*Tuple t1;
-						while((t1 =am.get_next())!=null){
-							t1.print(attrTypeList[k]);
-						}*/
-						
-				      amList[k] = am;
-				      				      
-						
+				   amList[k] = am;
 				    }
 				    catch (Exception e) {
 				      status = false;
 				      System.err.println (""+e);
 				    }
-
 				    if (status != true) {
 				      //bail out
 				      System.err.println ("*** Error setting up scan for sailors");
 				      Runtime.getRuntime().exit(1);
 				    }
-
-		       			    
 				    RelSpec rel = null;
-				    //int projColTableSpecificOffset= 1;
 				    String moreColFlag;
 				    FldSpec[] projListSpecificToTable = new FldSpec[20];
 				    int projListSpecificToTableIndex=0;
@@ -874,8 +845,6 @@ public class PhaseIITest implements GlobalConst{
 							rel = new RelSpec(RelSpec.innerRel);
 						}
 						projList[projlistIndex] = new FldSpec(rel, colNum);
-						//System.out.println("projlistIndex="+projlistIndex); 
-						
 						System.out.println("Are there more columns to be projected from this table (Y/N)?");
 						moreColFlag = scanner.nextLine();
 						
@@ -891,13 +860,7 @@ public class PhaseIITest implements GlobalConst{
 		      {
 		        e.printStackTrace();
 		      }
-		 
-			  	
-			//EOC
-		    //scanner.nextLine();
-		    
 		}
-		//System.out.println("projlistIndex ="+projlistIndex);
 		System.out.println("Enter the number of conditions in the where clause ");
 				
 		int numCondExpr = scanner.nextInt();
@@ -918,39 +881,19 @@ public class PhaseIITest implements GlobalConst{
 			}
 		}
 		
-		/*for(int i=0;i<attrTypeList.length;i++){
-			AttrType[] attr = attrTypeList[i];
-			for(int j=0;j<attr.length;j++){
-				System.out.println("attr type ="+attr[j].attrType);
-			}
-		}*/
-		
 		CondExpr [] condExprList = new CondExpr[numCondExpr+1];
-		//System.out.println("expr.length ="+condExprList.length);
-		
 		for(int a=0;a<condExprList.length-1;a++){
 			
-				//System.out.println("condString =");
 				condExprList[a] = new CondExpr();
 				String condString = conditionString[a];
 				condExprList[a].next  = null;
-				//System.out.println("condString ="+condString);
-				//System.out.println("a ="+a);
 				int beginIndex = 0;
 				int endIndex = condString.indexOf(".", 0);
-				//System.out.println("endIndex ="+endIndex);
-				//char tableNum=condString.charAt(index-1);
 				String tableNumString = condString.substring(beginIndex, endIndex);
-				//System.out.println("tableNumString ="+tableNumString);
 				int tableNum = Integer.parseInt(tableNumString);
-				//System.out.println("tableNum ="+tableNum);
-				//String tableName = tableNameList[tableNum-1];
 				int endIndex1 = condString.indexOf(" ",endIndex);
-				//System.out.println("endIndex1 ="+endIndex1);
 				String colNumString = condString.substring(endIndex+1, endIndex1);
-				//System.out.println("colNumString ="+colNumString);
 				int colNum = Integer.parseInt(colNumString);
-				//System.out.println("colNum ="+colNum);
 				
 				condExprList[a].type1 = new AttrType(AttrType.attrSymbol);
 				
@@ -966,9 +909,7 @@ public class PhaseIITest implements GlobalConst{
 				condExprList[a].operand1.symbol = new FldSpec (rel1,colNum);
 								
 				int endIndex2 = condString.indexOf(" ",endIndex1+1);
-				//System.out.println("endIndex2 ="+endIndex2);
 				String operator = condString.substring(endIndex1+1, endIndex2);
-				//System.out.println("operator = "+operator);
 				switch(operator){
 					case "=": condExprList[a].op = new AttrOperator(AttrOperator.aopEQ);
 					break;
@@ -988,17 +929,11 @@ public class PhaseIITest implements GlobalConst{
 					case ">=": condExprList[a].op = new AttrOperator(AttrOperator.aopGE);
 					break;
 				}
-				
-				//System.out.println("expr[a].op = "+condExprList[a].op);
-					
 				int endIndex3 = condString.indexOf(".",endIndex2);
-				//System.out.println("endIndex3 = "+endIndex3);
 				if(endIndex3==-1){
 					
 					String constantString = condString.substring(endIndex2+1);
-					//System.out.println("constantString = "+constantString);
 					constantString = constantString.trim();
-					//System.out.println("constantString after trim() = "+constantString);
 					
 					System.out.println("Enter the data type of the constant in the condition\n0-> String\n 1-> Integer\n 2->Real");
 					int opt  = scanner.nextInt();
@@ -1018,26 +953,14 @@ public class PhaseIITest implements GlobalConst{
 						default: System.out.println("Invalid option");
 							 System.exit(0);
 					}
-					
-					//System.out.println("expr[a].type2 = "+condExprList[a].type2);				
-					
 				}
 				else{
 					String tableNumString1 = condString.substring(endIndex2+1, endIndex3);
-					//System.out.println("tableNumString1 = "+tableNumString1);
 					int tableNum1 = Integer.parseInt(tableNumString1);
-					//System.out.println("tableNum1 = "+tableNum1);
-					//String tableName = tableNameList[tableNum-1];
 					
-					//int endIndex4 = condString.indexOf(" ",endIndex3);
 					String colNumString1 = condString.substring(endIndex3+1, condString.length());
 					int colNum1 = Integer.parseInt(colNumString1);
-					//System.out.println("colNum1 = "+colNum1);
-					//attr = attrTypeList[tableNum1-1][colNum1-1];
-					//expr[a].type2 = new AttrType(attr.attrType);
 					condExprList[a].type2 = new AttrType(AttrType.attrSymbol);
-					//System.out.println("expr[a].type2 = "+condExprList[a].type2);
-					
 					RelSpec rel2 = null;
 					if(tableNum1==0){
 						rel2 = new RelSpec(RelSpec.outer);
@@ -1047,7 +970,6 @@ public class PhaseIITest implements GlobalConst{
 					}
 									
 					condExprList[a].operand2.symbol = new FldSpec (rel2,colNum1);
-					//System.out.println("expr[a].operand2.symbol = "+condExprList[a].operand2.symbol);
 				}
 		}
 		
@@ -1153,25 +1075,32 @@ public class PhaseIITest implements GlobalConst{
 			System.out.println("Enter number of tables to be joined");
 			int numOfTables = scanner.nextInt();
 			AttrType [][] attrTypeList = new AttrType[numOfTables][];
+			AttrType [][] updateAttrTypeList = new AttrType[numOfTables][];
 			int [] numOfColsList = new int[numOfTables];
 			short [][] stringSizesList = new short[numOfTables][];
+			short [][] updateStrSizesList = new short[numOfTables][];
 			int [] joinedColList = new int[numOfTables]; 
 			Iterator [] iteratorList = new Iterator[numOfTables];
+			Iterator [] updateIteratorList = new Iterator[numOfTables];
+			Iterator [] deleteIteratorList = new Iterator[numOfTables];
 			AttrType [] indexAttrType = new AttrType[numOfTables];
 			String [] indexNameList = new String[numOfTables];
+			String [] updateIndexNameList = new String[numOfTables];
+			String [] deleteIndexNameList = new String[numOfTables];
 			IndexType[] b_index = new IndexType[numOfTables];
+			IndexType[] delete_index = new IndexType[numOfTables];
+			IndexType[] update_index = new IndexType[numOfTables];
 		    String[] fileNames = new String[numOfTables];
+		    String[] updateFiles = new String[numOfTables];
+		    String[] deleteFiles = new String[numOfTables];
 			String [] tableNameList = new String[numOfTables];
 			ArrayList<FldSpec> list = new ArrayList<FldSpec>();
 			FldSpec[] newProjList = null;
-			//ArrayList colNameList = new ArrayList();
 			scanner.nextLine();
 			
 			FldSpec[] projList = new FldSpec[20];
 			FldSpec[][] projTableSpecificList = new FldSpec[numOfTables][20];
 		    RelSpec rel = null;
-		    //projlist[1] = new FldSpec(rel, 2);
-			
 			int projlistIndex = 0;	//Gives number of output attribute columns in the projection
 			for(int k=0;k<numOfTables;k++)
 			{
@@ -1181,7 +1110,6 @@ public class PhaseIITest implements GlobalConst{
 				tableNameList[k] = tableName;
 				System.out.println("Enter file location");
 				String fileLoc1 = scanner.nextLine();
-			
 				System.out.println("Enter the column number in the table to be joined");
 				int joinColNumber = scanner.nextInt();
 				
@@ -1197,17 +1125,11 @@ public class PhaseIITest implements GlobalConst{
 					workBook = new HSSFWorkbook(fsPOI);         
 					ExcelParser parser = new ExcelParser(workBook.getSheetAt(0));
 					String [] res;
-		       		       
 					Heapfile topFile = new Heapfile(tableName+".in");
-						       
 					Tuple t = new Tuple();
-					
 					System.out.println("Enter the number of Columns in the table");
 					int numOfColms = scanner.nextInt();/*parser.getNumberOfColms()*/;
-					
-					//System.out.println("noOfColms ="+numOfColms);
 					numOfColsList[k] = numOfColms;
-					
 					AttrType [] Stypes = new AttrType[numOfColms+1];
 					int col=0;
 					int numOfStringCol =0;
@@ -1235,12 +1157,16 @@ public class PhaseIITest implements GlobalConst{
 					
 					col++;
 					}
+					updateAttrTypeList[k] = Stypes;
 					Stypes[col] = new AttrType(AttrType.attrString);
 					attrTypeList[k] = Stypes;
 					
 					short [] Ssizes = new short [numOfStringCol+1];
-					for(int e=0;e<numOfStringCol+1;e++)
-						Ssizes[e] = 20;  					
+					for(int e=0;e<numOfStringCol+1;e++){
+						Ssizes[e] = 20;
+						if(e==numOfStringCol)
+							updateStrSizesList[k] = Ssizes;
+					}
 					stringSizesList[k] = Ssizes;
 					
 					try {
@@ -1259,10 +1185,8 @@ public class PhaseIITest implements GlobalConst{
 						int i;
 						for (i = 0; i < Stypes.length-1; i++)
 						{
-							//System.out.println("Token Found [new folder" + res[i] + "]");
 							AttrType attr= Stypes[i];
 							int type = attr.attrType;
-							//System.out.println("type = "+type);
 							switch(type){
 					   			case AttrType.attrString: t.setStrFld(i+1, res[i]);
 					   				break;
@@ -1271,28 +1195,19 @@ public class PhaseIITest implements GlobalConst{
 					   			case AttrType.attrReal: t.setFloFld(i+1, Float.parseFloat(res[i]));
 					   				break;
 							}
-						
-					   
-							
 						}
-						
 						if(i==Stypes.length-2){
-							//System.out.println("Score =" + res[i]);
 							t.setScore(Float.parseFloat(res[i]));
 							t.setFloFld(i+1, Float.parseFloat(res[i]));
 						}
-						//t.print(Stypes);
 						rid = topFile.insertRecord(t.getTupleByteArray());
 						t.setStrFld(i+1, rid.pageNo.pid+"_"+rid.slotNo);
 						topFile.updateRecord(rid, t);
 						res = parser.splitLine();
 					}
 					excelDocumentStream.close();
-		       
-		       
 					// create an scan on the heapfile
 				    Scan scan = null;
-				    
 				    try {
 				      scan = new Scan(topFile);
 				    }
@@ -1301,7 +1216,6 @@ public class PhaseIITest implements GlobalConst{
 				      e.printStackTrace();
 				      Runtime.getRuntime().exit(1);
 				    }
-
 				    // create the index file
 				    BTreeFile btf = null;
 				    try {
@@ -1315,13 +1229,9 @@ public class PhaseIITest implements GlobalConst{
 				      e.printStackTrace();
 				      Runtime.getRuntime().exit(1);
 				    }
-
 				    System.out.println("BTreeIndex created successfully.\n"); 
-				    
 				    RID rid1 = new RID();
-				    //String key = null;
 				    Tuple temp = null;
-				    
 				    try {
 				      temp = scan.getNext(rid1);
 				    }
@@ -1331,10 +1241,7 @@ public class PhaseIITest implements GlobalConst{
 				    }
 				    while ( temp != null) {
 				      t.tupleCopy(temp);
-				      
 				      try {
-				    	  //System.out.println("indexAttrType[k].attrType ="+indexAttrType[k].attrType);
-				    	  //System.out.println("t.getIntFld ="+t.getIntFld(joinColNumber));
 				    	  switch(indexAttrType[k].attrType){
 				   			case AttrType.attrString: String keyString = t.getStrFld(joinColNumber);
 				   									  btf.insert(new StringKey(keyString), rid1); 
@@ -1346,7 +1253,6 @@ public class PhaseIITest implements GlobalConst{
 				   									btf.insert(new RealKey(keyFloat), rid1); 
 				   										break;
 						}
-				   		  				    	  					
 				      }
 				      catch (Exception e) {
 				    	  status = false;
@@ -1363,37 +1269,27 @@ public class PhaseIITest implements GlobalConst{
 				    
 				    // close the file scan
 				    scan.closescan();
-				    
 				    System.out.println("BTreeIndex file created successfully.\n"); 
-				    
 				    rel = new RelSpec(k);
 				    int projColTableSpecificOffset= 0;
 				    String moreColFlag;
 				    int [] colNumList = new int[20];
-				    //int count=1;
 				    while(flag){
-				    	
 				    	System.out.println("Enter the column number to be projected from this table");
 						int colNum = scanner.nextInt();
 						scanner.nextLine();
-//						/System.out.println("projlistIndex="+projlistIndex); 
 						FldSpec fld = new FldSpec(rel, colNum);
 						list.add(fld);
 						projList[projlistIndex] = new FldSpec(rel, colNum);
 						colNumList[projColTableSpecificOffset]=colNum;
 						projColTableSpecificOffset++;
-						
 						System.out.println("Are there more columns to be projected from this table (Y/N)?");
 						moreColFlag = scanner.nextLine();
-						
 						if(moreColFlag.equalsIgnoreCase("Y"))
 							flag=true;
-						
 						else if(moreColFlag.equalsIgnoreCase("N"))
 							flag=false;
 						projlistIndex++;
-						
-						
 				    }
 				    newProjList = new FldSpec[list.size()];
 				    for(int i = 0;i<list.size();i++){
@@ -1412,14 +1308,7 @@ public class PhaseIITest implements GlobalConst{
 		      {
 		        e.printStackTrace();
 		      }
-		 
-			  	
-			  	
-			//EOC
-		    //scanner.nextLine();
-		    
 		}
-		//System.out.println("projlistIndex ="+projlistIndex);
 		System.out.println("Enter the number of conditions in the where clause ");
 				
 		int numCondExpr = scanner.nextInt();
@@ -1433,57 +1322,29 @@ public class PhaseIITest implements GlobalConst{
 				
 		}
 		for(int a=0; a<numCondExpr ; a++){
-				
 			System.out.println(conditionString[a]);
 			if(a!=numCondExpr-1){
 				System.out.println("AND");
 			}
 		}
-		
-		/*for(int i=0;i<attrTypeList.length;i++){
-			AttrType[] attr = attrTypeList[i];
-			System.out.println("i ="+i);
-			for(int j=0;j<attr.length;j++){
-				System.out.println("attr type ="+attr[j].attrType);
-			}3
-		
-		}*/
-		
+	
 		CondExpr [] condExprList = new CondExpr[numCondExpr+1];
-		//System.out.println("expr.length ="+condExprList.length);
-		
 		for(int a=0;a<condExprList.length-1;a++){
-			
-				//System.out.println("condString =");
 				condExprList[a] = new CondExpr();
 				String condString = conditionString[a];
 				condExprList[a].next  = null;
-				//System.out.println("condString ="+condString);
-				//System.out.println("a ="+a);
 				int beginIndex = 0;
 				int endIndex = condString.indexOf(".", 0);
-				//System.out.println("endIndex ="+endIndex);
-				//char tableNum=condString.charAt(index-1);
 				String tableNumString = condString.substring(beginIndex, endIndex);
-				//System.out.println("tableNumString ="+tableNumString);
 				int tableNum = Integer.parseInt(tableNumString);
-				//System.out.println("tableNum ="+tableNum);
-				//String tableName = tableNameList[tableNum-1];
 				int endIndex1 = condString.indexOf(" ",endIndex);
-				//System.out.println("endIndex1 ="+endIndex1);
 				String colNumString = condString.substring(endIndex+1, endIndex1);
-				//System.out.println("colNumString ="+colNumString);
 				int colNum = Integer.parseInt(colNumString);
-				//System.out.println("colNum ="+colNum);
-				
 				condExprList[a].type1 = new AttrType(AttrType.attrSymbol);
-				
 				condExprList[a].operand1.symbol = new FldSpec (new RelSpec(tableNum-1),colNum);
 								
 				int endIndex2 = condString.indexOf(" ",endIndex1+1);
-				//System.out.println("endIndex2 ="+endIndex2);
 				String operator = condString.substring(endIndex1+1, endIndex2);
-				//System.out.println("operator = "+operator);
 				switch(operator){
 					case "=": condExprList[a].op = new AttrOperator(AttrOperator.aopEQ);
 					break;
@@ -1504,17 +1365,11 @@ public class PhaseIITest implements GlobalConst{
 					break;
 				}
 				
-				//System.out.println("expr[a].op = "+condExprList[a].op);
-					
 				int endIndex3 = condString.indexOf(".",endIndex2);
-				//System.out.println("endIndex3 = "+endIndex3);
 				if(endIndex3==-1){
 					
 					String constantString = condString.substring(endIndex2+1);
-					//System.out.println("constantString = "+constantString);
 					constantString = constantString.trim();
-					//System.out.println("constantString after trim() = "+constantString);
-					
 					System.out.println("Enter the data type of the constant in the condition\n0-> String\n 1-> Integer\n 2->Real");
 					int opt  = scanner.nextInt();
 					
@@ -1533,38 +1388,20 @@ public class PhaseIITest implements GlobalConst{
 						default: System.out.println("Invalid option");
 							 System.exit(0);
 					}
-					
-					//System.out.println("expr[a].type2 = "+condExprList[a].type2);				
-					
 				}
 				else{
 					String tableNumString1 = condString.substring(endIndex2+1, endIndex3);
-					//System.out.println("tableNumString1 = "+tableNumString1);
 					int tableNum1 = Integer.parseInt(tableNumString1);
-					//System.out.println("tableNum1 = "+tableNum1);
-					//String tableName = tableNameList[tableNum-1];
 					
-					//int endIndex4 = condString.indexOf(" ",endIndex3);
 					String colNumString1 = condString.substring(endIndex3+1, condString.length());
 					int colNum1 = Integer.parseInt(colNumString1);
-					//System.out.println("colNum1 = "+colNum1);
-					//attr = attrTypeList[tableNum1-1][colNum1-1];
-					//expr[a].type2 = new AttrType(attr.attrType);
 					condExprList[a].type2 = new AttrType(AttrType.attrSymbol);
-					//System.out.println("expr[a].type2 = "+condExprList[a].type2);
 					condExprList[a].operand2.symbol = new FldSpec (new RelSpec(tableNum1-1),colNum1);
-					//System.out.println("expr[a].operand2.symbol = "+condExprList[a].operand2.symbol);
 				}
 		}
 		
-		//condExprList[condExprList.length-1] = null;
-		
 		System.out.println("Enter total memory");
 		int memory = scanner.nextInt();
-		
-	/*	System.out.println("Enter the order - 0-ascending 1-descending");
-		int order = scanner.nextInt();*/
-		
 		System.out.println("Enter the number of top K tuples required in the resulting relation");
 		int topK = scanner.nextInt();
 		
@@ -1581,9 +1418,7 @@ public class PhaseIITest implements GlobalConst{
 				
 				//Create attribute/column list for each table
 				FldSpec [] Sprojection = new FldSpec[numOfColsList[j]+1];
-				//System.out.println("length: "+Sprojection.length);
 				for(int q=0;q<Sprojection.length;q++){
-				
 					Sprojection[q] = new FldSpec(new RelSpec(RelSpec.outer), q+1);
 				}
 				Iterator am = null;
@@ -1602,48 +1437,9 @@ public class PhaseIITest implements GlobalConst{
 				   System.err.println ("*** Error setting up scan for sailors");
 				   Runtime.getRuntime().exit(1);
 				}
-				
-			   /* DuplElim ed = null;
-			    Tuple t2 = new Tuple();
-			    t2 = null;
-			    try {
-			      ed = new DuplElim(attrTypeList[j], (short)numOfColsList[j], stringSizesList[j], am, memory, false);
-			    }
-			    catch (Exception e) {
-			      System.err.println (""+e);
-			      Runtime.getRuntime().exit(1);
-			    }*/
-			 
-			    //QueryCheck qcheck4 = new QueryCheck(4);
-	
-			    
-			   // t2 = null;
-			 
-			    /*try {
-			      while ((t2 = ed.get_next()) != null) {
-			        t2.print(attrTypeList[j]);
-			        System.out.println("t2.getScore()"+t2.getScore());
-			        qcheck4.Check(t2);
-			      }
-			    }
-			    catch (Exception e) {
-			      System.err.println (""+e);
-			      e.printStackTrace(); 
-			      Runtime.getRuntime().exit(1);
-			      }*/
-			    
-			   /* qcheck4.report(4);
-			    try {
-			      ed.close();
-			    }
-			    catch (Exception e) {
-			      status = FAIL;
-			      e.printStackTrace();*/
-Iterator itr = null;
-itr = new Sort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j],am, numOfColsList[j], new TupleOrder(TupleOrder.Descending), 4, memory );
+				Iterator itr = null;
+				itr = new Sort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j],am, numOfColsList[j], new TupleOrder(TupleOrder.Descending), 4, memory );
 			  	iteratorList[j] = itr;
-			  	//Tuple  sortedTuple = itr.get_next();
-			  	//sortedTuple.print(attrTypeList[j]);
 		}	
 			TopFAJoin trj = new TopFAJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 
 					joinedColList, iteratorList, b_index, indexNameList, memory, condExprList, newProjList, projlistIndex, topK, 1 , fileNames);
@@ -1658,6 +1454,342 @@ itr = new Sort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j
 				System.out.println("Probed : " + trj.num_probed(i));
 			}
 							
+			System.out.println("update FA (Y/N)?");
+			String updateFlag = scanner.nextLine();
+			if(updateFlag.equalsIgnoreCase("Y")){
+				for(int k=0;k<numOfTables;k++)
+				{
+					int relIndex = k+1;
+				System.out.println("Update Records for "+relIndex+"st Relation (Y/N)?");
+				String update = scanner.nextLine();
+				if(update.equals("Y")){
+					System.out.println("Enter file location");
+					String fileLoc1 = scanner.nextLine();
+					HSSFWorkbook workBook = null; 
+					File file  = new File(fileLoc1);
+					InputStream excelDocumentStream = null;
+					try 
+					{
+						excelDocumentStream = new FileInputStream(file);
+						POIFSFileSystem fsPOI = new POIFSFileSystem(new BufferedInputStream(excelDocumentStream));
+						workBook = new HSSFWorkbook(fsPOI);         
+						ExcelParser parser = new ExcelParser(workBook.getSheetAt(0));
+						String [] res;
+						Heapfile topFile = new Heapfile("update"+relIndex+".in");
+						Tuple t = new Tuple();
+						int numOfColms = numOfColsList[k];
+						AttrType [] Stypes = new AttrType[numOfColms];
+						int col=0;
+						int numOfStringCol =0;
+						
+						try {
+							t.setHdr((short) (numOfColms+1),attrTypeList[k], stringSizesList[k]);
+						}
+						catch (Exception e) {
+							System.err.println("*** error in Tuple.setHdr() ***");
+							status = false;
+							e.printStackTrace();
+						}
+						RID rid = null;
+						res = parser.splitLine();
+						while (res !=null && res.length!=0)
+						{
+							int i;
+							System.out.println("length: "+ attrTypeList[k].length);
+							for (i = 0; i < attrTypeList[k].length-1; i++)
+							{
+								AttrType attr= attrTypeList[k][i];
+								//System.out.println("attrType: "+attr);
+								int type = attr.attrType;
+								switch(type){
+						   			case AttrType.attrString: t.setStrFld(i+1, res[i]);
+						   				break;
+						   			case AttrType.attrInteger: t.setIntFld(i+1, Integer.parseInt(res[i]));
+						   				break;
+						   			case AttrType.attrReal: t.setFloFld(i+1, Float.parseFloat(res[i]));
+						   				break;
+								}
+							}
+							rid = topFile.insertRecord(t.getTupleByteArray());
+							String ridKey = rid.pageNo.pid+"_"+rid.slotNo;
+							t.setStrFld(attrTypeList[k].length, ridKey);
+							topFile.updateRecord(rid, t);
+							t.print(attrTypeList[k]);
+							res = parser.splitLine();
+						}
+						excelDocumentStream.close();
+						// create an scan on the heapfile
+					    Scan scan = null;
+					    
+					    try {
+					      scan = new Scan(topFile);
+					    }
+					    catch (Exception e) {
+					      status = false;
+					      e.printStackTrace();
+					      Runtime.getRuntime().exit(1);
+					    }
+					    // create the index file
+					    BTreeFile btf = null;
+					    try {
+					      btf = new BTreeFile("update"+relIndex+"_BTreeIndex", indexAttrType[k].attrType, GlobalConst.INDEX_REC_LEN, 1/*delete*/); 
+					      updateIndexNameList[k] = "update"+relIndex+"_BTreeIndex";
+					      update_index[k] = new IndexType(IndexType.B_Index);
+					      updateFiles[k] = "update"+relIndex+".in";
+					    }
+					    catch (Exception e) {
+					      status = false;
+					      e.printStackTrace();
+					      Runtime.getRuntime().exit(1);
+					    }
+					    System.out.println("BTreeIndex created successfully.\n"); 
+					    RID rid1 = new RID();
+					    Tuple temp = null;
+					    try {
+					      temp = scan.getNext(rid1);
+					    }
+					    catch (Exception e) {
+					      status = false;
+					      e.printStackTrace();
+					    }
+					    while ( temp != null) {
+					      t.tupleCopy(temp);
+					      try {
+					    	  switch(indexAttrType[k].attrType){
+					   			case AttrType.attrString: String keyString = t.getStrFld(joinedColList[k]+1);
+					   									  btf.insert(new StringKey(keyString), rid1); 
+					   										break;
+					   			case AttrType.attrInteger: int keyInt = t.getIntFld(joinedColList[k]+1);
+					   										btf.insert(new IntegerKey(keyInt), rid1); 
+					   										break;
+					   			case AttrType.attrReal: float keyFloat = t.getFloFld(joinedColList[k]+1);
+					   									btf.insert(new RealKey(keyFloat), rid1); 
+					   										break;
+							}
+					      }
+					      catch (Exception e) {
+					    	  status = false;
+					    	  e.printStackTrace();
+					      }
+					     try {
+					    	 temp = scan.getNext(rid1);
+					      }
+					      catch (Exception e) {
+					    	  status = false;
+					    	  e.printStackTrace();
+					      }
+					    }
+					    // close the file scan
+					    scan.closescan();
+					    System.out.println("BTreeIndex file created successfully.\n"); 
+					}    
+			      catch(Exception e)
+			      {
+			        e.printStackTrace();
+			      }
+				}
+			
+			else if(update.equalsIgnoreCase("N")){
+				updateFiles[k]="";
+				updateIndexNameList[k] = "";
+			    update_index[k] = null;
+			}
+			System.out.println("Delete Records for "+relIndex+"st Relation (Y/N)?");
+			String delete = scanner.nextLine();
+			if(delete.equals("Y")){
+				System.out.println("Enter file location");
+				String fileLoc1 = scanner.nextLine();
+				HSSFWorkbook workBook = null; 
+				File file  = new File(fileLoc1);
+				InputStream excelDocumentStream = null;
+				try 
+				{
+					excelDocumentStream = new FileInputStream(file);
+					POIFSFileSystem fsPOI = new POIFSFileSystem(new BufferedInputStream(excelDocumentStream));
+					workBook = new HSSFWorkbook(fsPOI);         
+					ExcelParser parser = new ExcelParser(workBook.getSheetAt(0));
+					String [] res;
+					Heapfile topFile = new Heapfile("delete"+relIndex+".in");
+					Tuple t = new Tuple();
+					int numOfColms = numOfColsList[k];
+					AttrType [] Stypes = new AttrType[numOfColms+1];
+					int col=0;
+					int numOfStringCol =0;
+					
+					try {
+						t.setHdr((short) (numOfColms+1),attrTypeList[k], stringSizesList[k]);
+					}
+					catch (Exception e) {
+						System.err.println("*** error in Tuple.setHdr() ***");
+						status = false;
+						e.printStackTrace();
+					}
+					RID rid = null;
+					res = parser.splitLine();
+					while (res !=null && res.length!=0)
+					{
+						int i;
+						for (i = 0; i < attrTypeList[k].length-1; i++)
+						{
+							AttrType attr= attrTypeList[k][i];
+							int type = attr.attrType;
+							switch(type){
+					   			case AttrType.attrString: t.setStrFld(i+1, res[i]);
+					   				break;
+					   			case AttrType.attrInteger: t.setIntFld(i+1, Integer.parseInt(res[i]));
+					   				break;
+					   			case AttrType.attrReal: t.setFloFld(i+1, Float.parseFloat(res[i]));
+					   				break;
+							}
+						}
+						rid = topFile.insertRecord(t.getTupleByteArray());
+						String ridKey = rid.pageNo.pid+"_"+rid.slotNo;
+						t.setStrFld(attrTypeList[k].length, ridKey);
+						topFile.updateRecord(rid, t);
+						t.print(attrTypeList[k]);
+						res = parser.splitLine();
+					}
+					excelDocumentStream.close();
+					// create an scan on the heapfile
+				    Scan scan = null;
+				    
+				    try {
+				      scan = new Scan(topFile);
+				    }
+				    catch (Exception e) {
+				      status = false;
+				      e.printStackTrace();
+				      Runtime.getRuntime().exit(1);
+				    }
+				    // create the index file
+				    BTreeFile btf = null;
+				    try {
+				      btf = new BTreeFile("delete"+relIndex+"_BTreeIndex", indexAttrType[k].attrType, GlobalConst.INDEX_REC_LEN, 1/*delete*/); 
+				      deleteIndexNameList[k] = "delete"+relIndex+"_BTreeIndex";
+				      delete_index[k] = new IndexType(IndexType.B_Index);
+				      deleteFiles[k] = "delete"+relIndex+".in";
+				    }
+				    catch (Exception e) {
+				      status = false;
+				      e.printStackTrace();
+				      Runtime.getRuntime().exit(1);
+				    }
+				    System.out.println("BTreeIndex created successfully.\n"); 
+				    RID rid1 = new RID();
+				    Tuple temp = null;
+				    try {
+				      temp = scan.getNext(rid1);
+				    }
+				    catch (Exception e) {
+				      status = false;
+				      e.printStackTrace();
+				    }
+				    while ( temp != null) {
+				      t.tupleCopy(temp);
+				      try {
+				    	  switch(indexAttrType[k].attrType){
+				   			case AttrType.attrString: String keyString = t.getStrFld(joinedColList[k]+1);
+				   									  btf.insert(new StringKey(keyString), rid1); 
+				   										break;
+				   			case AttrType.attrInteger: int keyInt = t.getIntFld(joinedColList[k]+1);
+				   										btf.insert(new IntegerKey(keyInt), rid1); 
+				   										break;
+				   			case AttrType.attrReal: float keyFloat = t.getFloFld(joinedColList[k]+1);
+				   									btf.insert(new RealKey(keyFloat), rid1); 
+				   										break;
+						}
+				      }
+				      catch (Exception e) {
+				    	  status = false;
+				    	  e.printStackTrace();
+				      }
+				     try {
+				    	 temp = scan.getNext(rid1);
+				      }
+				      catch (Exception e) {
+				    	  status = false;
+				    	  e.printStackTrace();
+				      }
+				    }
+				    // close the file scan
+				    scan.closescan();
+				    System.out.println("BTreeIndex file created successfully.\n"); 
+				}    
+		      catch(Exception e)
+		      {
+		        e.printStackTrace();
+		      }
+			}
+		else if(delete.equalsIgnoreCase("N")){
+			deleteFiles[k]="";
+			deleteIndexNameList[k] = "";
+		    delete_index[k] = null;
+			}
+		}
+				for(int k=0;k<numOfTables;k++){
+					if(!updateFiles[k].equals("")){
+						Iterator am = null;
+						FldSpec[] Sprojection = new FldSpec[attrTypeList[k].length];
+						for(int i=0;i<Sprojection.length;i++){
+							Sprojection[i] = new FldSpec(new RelSpec(RelSpec.outer), i+1);
+						}
+						try {
+							am  = new FileScan(updateFiles[k], attrTypeList[k], stringSizesList[k], 
+							  (short)(numOfColsList[k]+1), (short)(numOfColsList[k]+1),
+							  Sprojection, null);
+						} 
+						catch (Exception e) {
+							e.printStackTrace();
+							System.err.println (""+e);
+						}
+					if (status != true) {
+						System.err.println ("*** Error setting up scan for sailors");
+						Runtime.getRuntime().exit(1);
+					}
+				Iterator itr = null;
+				System.out.println("col count: "+ numOfColsList[k]);
+				itr = new Sort(attrTypeList[k], (short)attrTypeList[k].length, stringSizesList[k],am, numOfColsList[k], new TupleOrder(TupleOrder.Descending), 4, memory );
+				//(itr.get_next()).print(attrTypeList[k]);
+				updateIteratorList[k] = itr;
+				System.out.println("itertaor for "+k+" relation");
+				}
+					else{
+						updateIteratorList[k] = null;
+					}
+					
+					if(!deleteFiles[k].equals("")){
+						Iterator am = null;
+						FldSpec[] Sprojection = new FldSpec[attrTypeList[k].length];
+						for(int i=0;i<Sprojection.length;i++){
+							Sprojection[i] = new FldSpec(new RelSpec(RelSpec.outer), i+1);
+						}
+						try {
+							am  = new FileScan(deleteFiles[k], attrTypeList[k], stringSizesList[k], 
+							  (short)(numOfColsList[k]), (short)(numOfColsList[k]),
+							  Sprojection, null);
+						} 
+						catch (Exception e) {
+							e.printStackTrace();
+							System.err.println (""+e);
+						}
+					if (status != true) {
+						System.err.println ("*** Error setting up scan for sailors");
+						Runtime.getRuntime().exit(1);
+					}
+				Iterator itr = null;
+				itr = new Sort(attrTypeList[k], (short)attrTypeList[k].length, stringSizesList[k],am, numOfColsList[k]-1, new TupleOrder(TupleOrder.Descending), 4, memory );
+				deleteIteratorList[k] = itr;
+				}
+					else{
+						deleteIteratorList[k] = null;
+					}
+				}
+			//trj.deleteFA(deleteIndexNameList,deleteFiles,delete_index, deleteIteratorList);
+			trj.updateFA(updateIndexNameList,updateFiles,update_index, updateIteratorList);
+			}
+			else if(updateFlag.equalsIgnoreCase("N")){
+				System.exit(0);
+			}
 		}catch(Exception e){
 			e.printStackTrace();
 		}finally{
