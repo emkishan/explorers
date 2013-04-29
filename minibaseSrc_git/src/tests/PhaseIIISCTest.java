@@ -74,7 +74,7 @@ public class PhaseIIISCTest implements GlobalConst{
 				      1000,500,200,"Clock");
 	    */
 
-	    sysdef = new SystemDefs( dbpath, 10000, NUMBUF, "Clock" );
+	    sysdef = new SystemDefs( dbpath, 50990, 20480, "Clock" );
 	    
 	}
 	
@@ -545,7 +545,7 @@ public class PhaseIIISCTest implements GlobalConst{
 			  	iteratorList[j] = itr;
 		}	
 		StreamCombine sCombine = new StreamCombine(numOfTables, attrTypeList, numOfColsList, stringSizesList, 
-					joinedColList, iteratorList,  memory, condExprList, newProjList, projlistIndex, topK,1);
+					joinedColList, iteratorList,  memory, condExprList, newProjList, projlistIndex, topK,0);
 			sCombine.topKResults();				
 		}catch(Exception e){
 			e.printStackTrace();
@@ -553,7 +553,7 @@ public class PhaseIIISCTest implements GlobalConst{
 		}finally{
 			scanner.close();
 		}
-		System.out.println("Exit processTopRankJoin()\n");					
+						
 		}
 	public static void processTopNestedLoopJoin(){
 		
