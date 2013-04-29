@@ -76,7 +76,7 @@ public class PhaseIIIDriver implements GlobalConst{
 				      1000,500,200,"Clock");
 		 */
 
-		sysdef = new SystemDefs( dbpath, 1000, NUMBUF, "Clock" );
+		sysdef = new SystemDefs( dbpath, 10000, NUMBUF, "Clock" );
 
 	}
 
@@ -534,6 +534,7 @@ public class PhaseIIIDriver implements GlobalConst{
 				Iterator itr = null;
 				itr = new AdvancedSort(attrTypeList[j], (short)attrTypeList[j].length, stringSizesList[j],am, numOfColsList[j], new TupleOrder(TupleOrder.Descending), 4, memory );
 				iteratorList[j] = itr;
+				//System.out.println("inside driver"
 			}	
 			TopTAJoin trj = new TopTAJoin(numOfTables, attrTypeList, numOfColsList, stringSizesList, 
 					joinedColList, iteratorList, indexNameList, memory, condExprList, newProjList, projlistIndex, topK, fileNames, dupFlag);
