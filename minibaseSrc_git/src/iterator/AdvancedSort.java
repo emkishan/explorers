@@ -139,7 +139,7 @@ public class AdvancedSort extends Iterator implements GlobalConst
 				  toTuple.setIntFld(i+1,fromTuple.getIntFld(i+1));
 			  break;
 		  case AttrType.attrReal:
-				  toTuple.setFloFld(i+1,fromTuple.getIntFld(i+1));
+				  toTuple.setFloFld(i+1,fromTuple.getFloFld(i+1));
 			  break;
 		  case AttrType.attrString:
 			  toTuple.setStrFld(i+1,fromTuple.getStrFld(i+1));
