@@ -2,6 +2,7 @@ package tests;
 
 import global.AttrOperator;
 import global.AttrType;
+import global.ConstantVars;
 import global.ExcelParser;
 import global.GlobalConst;
 import global.IndexType;
@@ -74,7 +75,7 @@ public class PhaseIITest implements GlobalConst{
 				      1000,500,200,"Clock");
 	    */
 
-	    sysdef = new SystemDefs( dbpath, 1000, NUMBUF, "Clock" );
+	    sysdef = new SystemDefs( dbpath, 10000, NUMBUF, "Clock" );
 	    
 	}
 
@@ -1726,8 +1727,11 @@ public class PhaseIITest implements GlobalConst{
 		    delete_index[k] = null;
 			}
 		}
+				int updateCount=0;
+				int delCount=0;
 				for(int k=0;k<numOfTables;k++){
 					if(!updateFiles[k].equals("")){
+						updateCount++;
 						Iterator am = null;
 						FldSpec[] Sprojection = new FldSpec[attrTypeList[k].length];
 						for(int i=0;i<Sprojection.length;i++){
@@ -1758,6 +1762,7 @@ public class PhaseIITest implements GlobalConst{
 					}
 					
 					if(!deleteFiles[k].equals("")){
+						delCount++;
 						Iterator am = null;
 						FldSpec[] Sprojection = new FldSpec[attrTypeList[k].length];
 						for(int i=0;i<Sprojection.length;i++){
@@ -1765,8 +1770,9 @@ public class PhaseIITest implements GlobalConst{
 						}
 						try {
 							am  = new FileScan(deleteFiles[k], attrTypeList[k], stringSizesList[k], 
-							  (short)(numOfColsList[k]), (short)(numOfColsList[k]),
+							  (short)(numOfColsList[k]+1), (short)(numOfColsList[k]+1),
 							  Sprojection, null);
+							//am.get_next().print(attrTypeList[k]);
 						} 
 						catch (Exception e) {
 							e.printStackTrace();
@@ -1777,18 +1783,21 @@ public class PhaseIITest implements GlobalConst{
 						Runtime.getRuntime().exit(1);
 					}
 				Iterator itr = null;
-				itr = new Sort(attrTypeList[k], (short)attrTypeList[k].length, stringSizesList[k],am, numOfColsList[k]-1, new TupleOrder(TupleOrder.Descending), 4, memory );
+				itr = new Sort(attrTypeList[k], (short)attrTypeList[k].length, stringSizesList[k],am, numOfColsList[k], new TupleOrder(TupleOrder.Descending), 4, memory );
+				//(itr.get_next()).print(attrTypeList[k]);
 				deleteIteratorList[k] = itr;
 				}
 					else{
 						deleteIteratorList[k] = null;
 					}
 				}
-			//trj.deleteFA(deleteIndexNameList,deleteFiles,delete_index, deleteIteratorList);
-			trj.updateFA(updateIndexNameList,updateFiles,update_index, updateIteratorList);
+				if(delCount>0)
+					trj.deleteFA(deleteIteratorList);
+				if(updateCount>0)
+					trj.updateFA(updateIndexNameList,updateFiles,update_index, updateIteratorList);
 			}
 			else if(updateFlag.equalsIgnoreCase("N")){
-				System.exit(0);
+				return;
 			}
 		}catch(Exception e){
 			e.printStackTrace();
@@ -1844,20 +1853,20 @@ public class PhaseIITest implements GlobalConst{
 			
 				case 3: 
 					//System.out.println("Before getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-					readCount = jjoin.sysdef.JavabaseBM.getReadCount();
-					writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
-					allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
+					readCount = ConstantVars.getReadCount();
+					writeCount = ConstantVars.getWriteCount();
+					//allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
 					long before = System.currentTimeMillis();
 					processTopRankJoin();
 					//System.out.println("After getPageAccessCount()="+jjoin.sysdef.JavabaseBM.getPageAccessCount());
-					readCount = jjoin.sysdef.JavabaseBM.getReadCount();
-					writeCount = jjoin.sysdef.JavabaseBM.getWriteCount();
-					allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
-					/*System.out.println("Pages read : " + (readCount));
+					readCount = ConstantVars.getReadCount();
+					writeCount = ConstantVars.getWriteCount();
+					//allocateCount = jjoin.sysdef.JavabaseBM.getAllocateCount();
+					System.out.println("Pages read : " + (readCount));
 					System.out.println("Pages write : " + (writeCount));
-					System.out.println("Pages allocated : " + (allocateCount));
-					*/long after = System.currentTimeMillis();
-					System.out.println("Time Taken" + (after-before)/1000 + " secs");
+					//System.out.println("Pages allocated : " + (allocateCount));
+					long after = System.currentTimeMillis();
+					System.out.println("Time Taken " + (after-before)/1000 + " secs");
 					break;
 				case 0:
 					System.out.println("Goodbye");
