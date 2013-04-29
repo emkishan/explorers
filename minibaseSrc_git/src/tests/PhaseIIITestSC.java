@@ -106,7 +106,7 @@ public class PhaseIIITestSC {
 	    //5242880, 20480,
 	    
 	    //sysdef = new SystemDefs( dbpath, 1000, global.GlobalConst.NUMBUF, "Clock" ); original code
-	    sysdef = new SystemDefs( dbpath, 509900, 10000, "Clock" ); 
+	    sysdef = new SystemDefs( dbpath, 509900, 20480, "Clock" ); 
 	    //sysdef = new SystemDefs( dbpath, 509900, 20480, "Clock" );
 	    /*sysdef = new SystemDefs( dbpath, 509900, 1000, "Clock" ); //perfect 
 	    sysdef = new SystemDefs( dbpath, 509900, 20480, "Clock" ); //perfect 509900, 20480
@@ -1464,7 +1464,7 @@ public class PhaseIIITestSC {
 		
 		System.out.println("Enter the index of the table to be updated");
 		for(int i=0;i<tableNameList.length;i++){
-			System.out.println("Index : "+i+"\t for "+tableNameList[i]);
+			System.out.println("Index : "+i+"\t for Relation"+tableNameList[i]);
 		}
 		
 		//String tableName = scanner.next();
@@ -1507,9 +1507,9 @@ public class PhaseIIITestSC {
 			System.out.println("Enter the name of the file with update data");
 			String updatedFileName = scanner.nextLine();
 			//String updatedFileName = "eUp";
-			/*System.out.println("Enter file location");
-			String fileLoc = scanner.nextLine();*/
-			String fileLoc = "C://data//"+updatedFileName+".xls";
+			System.out.println("Enter file location");
+			String fileLoc = scanner.nextLine();
+			//String fileLoc = "C://data//"+updatedFileName+".xls";
 			//String fileLoc = "C://data//eUp.xls";
 			
 			HSSFWorkbook workBook = null; 
@@ -1613,7 +1613,10 @@ public class PhaseIIITestSC {
 			break;
 		}
 		try {
+			long start = System.currentTimeMillis();
 			sm.AddTopNRAJoin(itrList,relationList,relationNames);
+			long end = System.currentTimeMillis();
+			System.out.println("Insert - Total Time="+(end - start));
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -1622,11 +1625,10 @@ public class PhaseIIITestSC {
 	
 	public void deleteRecords(){
 		scanner = new Scanner(System.in);
-		//int numOfTables = scanner.nextInt();   //2;
-		
-		/*System.out.println("Enter the name of the table to be updated");
-		String tableName = scanner.next();*/
-		String tableName = "ExcelTest1";
+				
+		System.out.println("Enter the name of the table to be updated");
+		String tableName = scanner.next();
+		//String tableName = "ExcelTest1";
 		if(tableNameList==null){
 			System.out.println("Tables do not exist");
 			System.exit(0);
@@ -1652,12 +1654,12 @@ public class PhaseIIITestSC {
 				e.printStackTrace();
 			}
 			scanner.nextLine();
-			/*System.out.println("Enter the name of the updated file");
-			String updatedFileName = scanner.nextLine();*/
-			String updatedFileName = "e1up";
-			/*System.out.println("Enter file location");
-			String fileLoc = scanner.nextLine();*/
-			String fileLoc = "C://data//e1up.xls";
+			System.out.println("Enter the name of the updated file");
+			String updatedFileName = scanner.nextLine();
+			//String updatedFileName = "e1up";
+			System.out.println("Enter file location");
+			String fileLoc = scanner.nextLine();
+			//String fileLoc = "C://data//e1up.xls";
 			
 			HSSFWorkbook workBook = null; 
 			File file  = new File(fileLoc);
@@ -1731,7 +1733,12 @@ public class PhaseIIITestSC {
 					while((t1 =am.get_next())!=null){
 						t1.print(attrTypeList[tableIndex]);
 					}*/		
+			      //long start = System.currentTimeMillis();
+			      long start = System.nanoTime();
 			      sm.DeleteTopNRAJoin(am,tableIndex);
+			      //long end = System.currentTimeMillis();
+			      long end = System.nanoTime();
+			      System.out.println("Delete - Total Time="+(end - start));
 					
 			    }
 			    catch (Exception e) {

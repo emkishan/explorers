@@ -27,7 +27,7 @@ import btree.IntegerKey;
 import btree.StringKey;
 
 
-public class TopTAJoin {
+public class TopTAJoinSC {
 	private int numberOfTables;
 	private AttrType inputRelations[][];
 	private int lengths[];
@@ -76,9 +76,12 @@ public class TopTAJoin {
 	private RID lastAccessedRID = new RID();
 	private BTreeFile tempFileBtf = null;
 	int totalCounter=0;
+	int arr[];
+	FldSpec[] tProjection;
+	float[] indicators;
 
 	//
-	public TopTAJoin (int numTables,
+	public TopTAJoinSC (int numTables,
 			AttrType[][] in,
 			int[] len_in,
 			short[][] s_sizes,
@@ -109,6 +112,7 @@ public class TopTAJoin {
 			readIntKeys = new HashSet<Integer>();
 			superTuple = new Tuple();
 			kMinimums = new float[numTables];
+			arr = new int[numberOfTables];
 			
 			//min = numberOfTables;
 
@@ -970,9 +974,21 @@ public class TopTAJoin {
 
 	private void performOneIteration(){
 		float thresholdTemp = 0;
+		int some = 0;
+    	int relNum = 0;
+    	int nextRel=-1;
 		for(int relNumber=0;relNumber<numberOfTables;relNumber++){
 			try{
+				int relationNum=0;
 				totalCounter++;
+				if(some>2*knumberOfTuples){
+					//nextRel=calculateIndicator();
+					nextRel=checkIndicator();
+					relationNum=nextRel;
+				}
+				else{
+					relationNum=relNumber;
+				}
 				//System.out.println("Completed one iteration");
 				//System.out.println("===========================================================");
 
@@ -2070,5 +2086,201 @@ public class TopTAJoin {
 			e.printStackTrace();
 			return flag;
 		}
+	}
+	public void calculateIndicator1()
+	{
+		int[] M = new int[this.numberOfTables];
+		float[] indicators = new float[numberOfTables];
+		FldSpec[] fldProjectionList = new FldSpec[combinedAttrTypes.length];
+		//FldSpec[] fldProjectionList = new FldSpec[combinedAttrCount];
+		for (int j = 0; j < fldProjectionList.length; j++) {
+			fldProjectionList[j] = new FldSpec(new RelSpec(RelSpec.outer), j + 1);
+		}
+		for (int k = 0; k < combinedAttrTypes.length; k++)
+			tProjection[k] = new FldSpec(new RelSpec(RelSpec.outer), k + 1);
+		try {
+			float[] prevScore = new float[this.numberOfTables];
+			float[] currScore = new float[this.numberOfTables];
+			/*System.out.println("In Indicator Function");
+			System.out.println("--------------------------------");
+			printTempFile();
+			System.out.println("--------------------------------");*/
+			Tuple tempTuple;
+			// Reset M.
+			for (int j = 0; j < numberOfTables; j++) {
+				M[j] = 0;
+			}
+			FileScan fScan = null;
+			try {
+				fScan = new FileScan("interTATuples.in", superAttrTypes, superStrSizes,(short)superAttrTypes.length, superAttrTypes.length,tProjection, null);
+						//new FileScan("TempResults.in", combinedAttr,combinedStrSizes, (short) combinedAttrCount,combinedAttrCount, combinedProjection, null);
+				
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+			TupleOrder order = new TupleOrder(TupleOrder.Descending);
+			Iterator topIterator = null;
+			try {
+				topIterator = new Sort(superAttrTypes, (short)superAttrTypes.length, superStrSizes,fScan, combinedAttrTypes.length,order, 4, n_buf_pgs);
+				//new Sort(combinedAttr,(short) combinedAttrCount, combinedStrSizes, fScan,combinedAttrCount-1, order, 4, 20);				  
+				
+			} catch (SortException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			int count = knumberOfTuples;
+			while ((tempTuple = topIterator.get_next()) != null) {
+				if(count <= 1)
+					break;
+				int numTables=0;
+				for(int j=0;j<numberOfTables;j++){
+					if(tempTuple.getStrFld(joinColumns[j]+tupleOffsets[j]+1)!=null){
+						numTables++;
+					}					
+				}
+				int fieldLength = numTables;
+				if(fieldLength == numberOfTables)
+					continue;
+				count--;
+				Tuple tempStreamTuple = new Tuple();
+				tempStreamTuple.setHdr((short)superAttrTypes.length, superAttrTypes, superStrSizes);
+				tempStreamTuple.tupleCopy(tempTuple);
+				tempStreamTuple.print(superAttrTypes);
+				int sum = 0;
+				for (int j = 0; j < numberOfTables; j++) {
+					AttrType type = inputRelations[j][joinColumns[j]];
+					//int fieldIndex = getTupleOffset(j);
+					int fieldIndex = tupleOffsets[j]+joinColumns[j]+1;
+					int flag =-1;
+					switch(type.attrType)
+					{
+					case AttrType.attrInteger : 
+
+						if(tempStreamTuple.getIntFld(fieldIndex) == 0)
+							flag =0;
+						else 
+							flag =1;
+						break;
+					case AttrType.attrString :
+						if(tempStreamTuple.getStrFld(fieldIndex).equals(""))
+							flag =0;
+						else
+							flag =1;
+						break;
+					case AttrType.attrReal :
+						if(tempStreamTuple.getFloFld(fieldIndex) == 0)
+							flag =0;
+						else
+							flag =1;
+						break;
+					}
+					if (flag == 0) {
+						M[j]++;
+					} 
+					else {
+						sum++;
+					}
+				}
+			}
+			//topIterator.close();
+			fScan.close();
+			FileScan fileScan =
+					new FileScan("InterTuple.in", superAttrTypes, superStrSizes,(short)superAttrTypes.length, superAttrTypes.length,tProjection, null);
+					//new FileScan("TempResults.in",combinedAttr, combinedStrSizes, (short) combinedAttrCount,combinedAttrCount, fldProjectionList, null);
+			
+			while ((tempTuple = fileScan.get_next()) != null) {
+				
+				Tuple tempStreamTuple = new Tuple();
+				tempStreamTuple.setHdr((short)superAttrTypes.length, superAttrTypes, superStrSizes);
+				tempStreamTuple.tupleCopy(tempTuple);
+				tempStreamTuple.print(superAttrTypes);
+				//tempStreamTuple.print(combinedAttr);
+				for (int j = 0; j < numberOfTables; j++) {
+					int flag = -1;
+					AttrType type = inputRelations[j][joinColumns[j]];
+					int fieldIndex = tupleOffsets[j]+joinColumns[j]+1;
+					//int fieldIndex = getTupleOffset(j);
+					switch(type.attrType)
+					{
+					case AttrType.attrInteger : 
+
+						if(tempStreamTuple.getIntFld(fieldIndex) == 0)
+							flag =0;
+						else 
+							flag =1;
+						break;
+					case AttrType.attrString :
+						if(tempStreamTuple.getStrFld(fieldIndex).equals(""))
+							flag =0;
+						else
+							flag =1;
+						break;
+					case AttrType.attrReal :
+						if(tempStreamTuple.getFloFld(fieldIndex) == 0)
+							flag =0;
+						else
+							flag =1;
+						break;
+					}
+					if (flag !=0) {
+						prevScore[j] = currScore[j];
+						float score = tempStreamTuple.getFloFld(tupleOffsets[j]+inputRelations[j].length-1);
+						currScore[j] = score;
+					}
+				}
+			}
+			fileScan.close();
+			// Stream combine variables.
+			float dervOfAvgFunc = (float) (1.0f / numberOfTables);
+			// Calculate the indicators for each stream.
+			for (int i = 0; i < numberOfTables; i++) {
+				double diff = (double) prevScore[i] - currScore[i];	
+				indicators[i] = (float) (M[i] * dervOfAvgFunc * diff);
+			}
+		} 
+		catch (Exception e) {
+
+			e.printStackTrace();
+		}
+	}
+	
+	private int checkIndicator()
+	{
+		calculateIndicator1();
+		boolean temp = false;
+		float maxIndicator=-1;
+		float indicator =-1;
+		int tableIndex =-1;
+		for(int i=0;i<numberOfTables;i++){
+			indicator = indicators[i];
+			if(indicator>maxIndicator)
+			{
+				maxIndicator = indicator;
+				tableIndex =i;
+			}
+		}
+		arr[tableIndex]++;
+		for(int i=0;i<numberOfTables;i++){
+			if(arr[i]>=numberOfTables)
+			{
+				if(i==numberOfTables-1)
+					tableIndex =0;
+				else
+					tableIndex =i+1;
+				temp =true;
+				break;
+			}
+			
+		}
+		if(temp){
+			for(int i=0;i<numberOfTables;i++){
+				arr[i]=0;
+			}
+			temp =false;
+		}
+		return tableIndex;
 	}
 }

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import sun.awt.windows.ThemeReader;
 
 import btree.BTreeFile;
 import btree.IntegerKey;
@@ -192,7 +191,7 @@ public class TopNRAJoinSC {
 			int tupleOffset= getTupleOffset(relation);
 			AttrType attrType = new AttrType(inputRelations[0][joinColumns[0]].attrType);
 			while((tuple =am.get_next())!=null){
-				tuple.print(inputRelations[relation]);
+				//tuple.print(inputRelations[relation]);
 				Scan scan = null;
 			    Scan dupScan = null;
 				try {
@@ -329,8 +328,8 @@ public class TopNRAJoinSC {
 									Tuple newTuple = new Tuple();
 									newTuple.setHdr((short)attrCount, interAttr, strSizes);
 									newTuple.tupleCopy(t);
-									System.out.println("$$$$After$$$$$$$$");
-									newTuple.print(interAttr);
+									/*System.out.println("$$$$After$$$$$$$$");
+									newTuple.print(interAttr);*/
 									updateTuple(tuple, newTuple, relation, tupleOffset,1);
 									for(int j=0;j<numberOfTables;j++){
 										if(newTuple.getStrFld(joinColumns[j]+getTupleOffset(j)+1)!=null){
@@ -343,7 +342,7 @@ public class TopNRAJoinSC {
 									}
 									newTuple.setFloFld(attrCount-1, worstScore);
 									newTuple.setFloFld(attrCount-2, bestScore);
-									newTuple.print(interAttr);
+									//newTuple.print(interAttr);
 									if(minTopK<bestScore){
 									RID insertRid1=interFile.insertRecord(newTuple.getTupleByteArray());
 									}
@@ -388,8 +387,8 @@ public class TopNRAJoinSC {
 							interScan.close();
 							}	
 						else{
-							System.out.println("@@@@@@ This tuple is new @@@@@");
-							tuple.print(inputRelations[relation]);
+							//System.out.println("@@@@@@ This tuple is new @@@@@");
+							//tuple.print(inputRelations[relation]);
 							if(relation==0){
 								for(int j=1;j<itrList.size();j++){
 									//Iterator am1 = (Iterator)itrList.get(j);
@@ -421,9 +420,9 @@ public class TopNRAJoinSC {
 									Iterator itr3= null;
 									itr3 = new AdvancedSort(tempAttr, (short) (inputRelations[j].length-1), stringSizes[j],am2, (inputRelations[j].length-1),new TupleOrder(TupleOrder.Descending), 4, 10);
 									Tuple t1;
-									System.out.println("@@@@@@@ third else case @@@@@@@@@");
+									//System.out.println("@@@@@@@ third else case @@@@@@@@@");
 									while((t1 =itr3.get_next())!=null){
-										t1.print(inputRelations[j]);
+										//t1.print(inputRelations[j]);
 										Tuple newTuple = new Tuple();
 										newTuple.setHdr((short)attrCount, interAttr, strSizes);
 										updateTuple(tuple,newTuple, relation, tupleOffset,1);
@@ -443,7 +442,7 @@ public class TopNRAJoinSC {
 										newTuple.setFloFld(attrCount-1, worstScore);
 										newTuple.setFloFld(attrCount-2, bestScore);
 										newTuple.setStrFld(attrCount, key);
-										newTuple.print(interAttr);
+										//newTuple.print(interAttr);
 										/*CondExpr[] expr4 = new CondExpr[2];
 										IndexScan dupInterScan1 = new IndexScan(new IndexType(IndexType.B_Index), "DupCheckTopNRAJoin.in", "DupBTreeIndex", dupInterAttr, strSizes, (numberOfTables+1), (numberOfTables+1), dupTProjection, expr4, 1, false);
 										System.out.println("**************DupInternscan******************");
@@ -457,8 +456,8 @@ public class TopNRAJoinSC {
 											dupFileTemp.setStrFld(1,key);
 											dupFileTemp.setIntFld((relation+2),1);
 											dupFileTemp.setIntFld((j+2),1);
-											System.out.println("prtinting before inserting ");
-											dupFileTemp.print(dupInterAttr);
+											//System.out.println("prtinting before inserting ");
+											//dupFileTemp.print(dupInterAttr);
 											RID rid5=dupCheckIndexFile.insertRecord(dupFileTemp.getTupleByteArray());
 											dupBtf.insert(new StringKey(key), rid5);
 										}
@@ -480,7 +479,7 @@ public class TopNRAJoinSC {
 			    break;
 			    }
 			}
-			//printTuples();
+			printTuples1();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}	
@@ -503,13 +502,13 @@ public class TopNRAJoinSC {
 		Scan fileScans[] = new Scan[numberOfTables];
 		IndexScan dupInterScan = null;
 		IndexScan interScan = null;
-		System.out.println("!!! THIS IS STREAM COMBINE NRA !!!");
+		System.out.println("*** THIS IS STREAM COMBINE NRA ***");
 		//get Attribute count
 		for(int i=0;i<inputRelations.length;i++){
 			//Added to store score as  a field
 			attrCount+=inputRelations[i].length;
 		}
-		System.out.println("attrCount "+attrCount);
+		//System.out.println("attrCount "+attrCount);
 		//count of visited relations is stored in an integer variable
 		//attrCount is incremented to store best score and worst score
 		attrCount+=3;
@@ -592,7 +591,8 @@ public class TopNRAJoinSC {
 	    
 	    try {
 	    	int some = 0;
-	    	int relNum = 0;
+	    	int topKCounter=0;
+			int relNum = 0;
 	    	int nextRel=-1;
 			do{
 				for (int i = 0; i < numberOfTables; i++) {
@@ -605,7 +605,7 @@ public class TopNRAJoinSC {
 					else{
 						relNum=i;
 					}
-					System.out.println("$$$$ SOME Read from the relation $$$ :"+relNum);
+					//System.out.println("$$$$ SOME Read from the relation $$$ :"+relNum);
 					int tupleOffset = getTupleOffset(relNum);
 					tuple = new Tuple();
 					tuple = iterators[relNum].get_next();
@@ -959,6 +959,7 @@ public class TopNRAJoinSC {
 					}
 				updateAllScoresStringJoin();
 				calcluateMinTopKAndThreshold();
+				//System.out.println("&&&&&&&&&&&&&&&&&&& After calculate &&&&&&&&&&&&&&777");
 				
 				/*
 				 * B tree Index file is closed here since in the next iteration a new B tree file is again created, this will save memory
@@ -970,10 +971,17 @@ public class TopNRAJoinSC {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				topKCounter++;
 				}//end of for loop
 			//System.out.println("!!!!!!!!!!!!!!!!!exiting condition "+threshold+" min top k "+minTopK);
-			printTuples1();
-			}while(!(threshold<=minTopK));//this is the exit condition. 
+			/*boolean a =!(threshold<=minTopK);
+			boolean b= (topKCounter<=topK*2);
+			boolean c = a&b;
+			boolean d = a&&b;
+			System.out.println("!!!!!!!!!!!!!!!!!exiting condition Threshold="+threshold+" minTopK="+minTopK +" topKCounter ="+topKCounter+" A and B : "+a + " "+b+ " "+c+ " "+d );*/
+			}while((!(threshold<=minTopK)) || (topKCounter<=topK*2));//this is the exit condition. 
+			printTuples1();			
+			
 			/*
 			 * that is when threshold is less than min top k.
 			 * threshold = min(best score of all tuples) which is max of unseen
@@ -981,7 +989,7 @@ public class TopNRAJoinSC {
 			 *  if the best score of any tuple is less than worst score of top k tuples 
 			 *  it means that those tuples can't become part of the top k tuples.
 			 */
-			System.out.println("!!!!!!!!!!!!!!!!!exiting condition "+threshold+" min top k "+minTopK);
+			//System.out.println("!!!!!!!!!!!!!!!!!exiting condition "+threshold+" min top k "+minTopK);
 			
 			//write into outFile
 			
@@ -1078,13 +1086,14 @@ public class TopNRAJoinSC {
 							  }
 						}
 						if(isSame){
-							System.out.println("TUPLES ARE SAME in delete intertuple");
-							tempTuple.print(interAttr);
+							//System.out.println("TUPLES ARE SAME in delete intertuple");
+							//tempTuple.print(interAttr);
 							tempTuple.setStrFld(attrCount, "DEL");
 							if(attrType.attrType==AttrType.attrInteger){
 								tempTuple.setIntFld(attrCount, 555);
 							}
 							else{
+								//System.out.println("DEL Testing");
 								tempTuple.setStrFld(attrCount, "DEL");
 							}
 							interFile.updateRecord(temprid, tempTuple);
@@ -1095,7 +1104,7 @@ public class TopNRAJoinSC {
 						}						
 					}
 				}
-				interScan.close();
+				//interScan.close();
 				/*IndexScan tempIndex = new IndexScan(new IndexType(IndexType.B_Index), fileNames[relation], indexNameList[relation], inputRelations[relation], stringSizes[relation], inputRelations[relation].length, inputRelations[relation].length, tProjection, expr, joinColumns[relation]+1, false);
 				Tuple tempTuple = tempIndex.get_next();
 				RID temprid=new RID();
@@ -1108,6 +1117,7 @@ public class TopNRAJoinSC {
 				
 				//deleteFromInterFile(temprid,relation);
 			}
+			hardDelete();
 			System.out.println("After delete " + interFile.getRecCnt());
 		}
 		catch(Exception e){
@@ -1115,7 +1125,7 @@ public class TopNRAJoinSC {
 			e.printStackTrace();
 		}
 		//printTuples1();
-		hardDelete();
+		
 	}
 	
 	/*private void deleteFromInterFile(RID delRID, int relation){
@@ -1379,7 +1389,7 @@ public class TopNRAJoinSC {
 	public void hardDelete(){
 		Iterator am = null;
 		try {
-			System.out.println("%%%%%%%%%this is hard delete%%%%%%%%");
+			System.out.println("%%%%%%%%% Following Tuples are deleted %%%%%%%%");
 			CondExpr[] expr = new CondExpr[2];
 			expr[0] = new CondExpr();
 			expr[0].op = new AttrOperator(AttrOperator.aopEQ);
@@ -1551,16 +1561,20 @@ public class TopNRAJoinSC {
 	
 	public void printTuples(){}
 	public void printTuples1(){
-		System.out.println("$$$$$$$$$$$$$$$$$$$$$ start $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+		System.out.println("\n\n$$$$$$$$$$$$$$$$$$$$$ START OF TOP K TUPLES $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 		try {
 			Iterator am  = new FileScan("InterTuple.in", interAttr, strSizes,(short)attrCount, attrCount,tProjection, null);
 			Tuple tuple1 = null;
 			Iterator it1 = null;
 			try {
 				it1 = new Sort(interAttr, (short)attrCount, strSizes,am, attrCount-1,new TupleOrder(TupleOrder.Descending), 4, n_buf_pgs);
+				int count=0;
 				while((tuple1 = it1.get_next()) != null) {
+					if(count<topK)
 					tuple1.print(interAttr);
-					//System.out.println("in get top k top k"+topK);
+					else
+						break;
+					count++;
 				}
 				//it1.close();
 			} catch (Exception e) {
@@ -1572,7 +1586,7 @@ public class TopNRAJoinSC {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.out.println("$$$$$$$$$$$$$$$$$$$$$ end $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+		System.out.println("$$$$$$$$$$$$$$$$$$$$$ END OF TOP K TUPLES $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
 		
 	}
 	public int calculateIndicator(){
@@ -1658,7 +1672,7 @@ public class TopNRAJoinSC {
 				Tuple tempStreamTuple = new Tuple();
 				tempStreamTuple.setHdr((short)attrCount, interAttr, strSizes);
 				tempStreamTuple.tupleCopy(tempTuple);
-				tempStreamTuple.print(interAttr);
+				//tempStreamTuple.print(interAttr);
 				for (int j = 0; j < numberOfTables; j++) {
 					int flag = -1;
 					AttrType type = inputRelations[j][joinColumns[j]];
@@ -1774,7 +1788,7 @@ public class TopNRAJoinSC {
 				Tuple tempStreamTuple = new Tuple();
 				tempStreamTuple.setHdr((short)attrCount, interAttr, strSizes);
 				tempStreamTuple.tupleCopy(tempTuple);
-				tempStreamTuple.print(interAttr);
+				//tempStreamTuple.print(interAttr);
 				int sum = 0;
 				for (int j = 0; j < numberOfTables; j++) {
 					AttrType type = inputRelations[j][joinColumns[j]];
@@ -1822,7 +1836,7 @@ public class TopNRAJoinSC {
 				Tuple tempStreamTuple = new Tuple();
 				tempStreamTuple.setHdr((short)attrCount, interAttr, strSizes);
 				tempStreamTuple.tupleCopy(tempTuple);
-				tempStreamTuple.print(interAttr);
+				//tempStreamTuple.print(interAttr);
 				//tempStreamTuple.print(combinedAttr);
 				for (int j = 0; j < numberOfTables; j++) {
 					int flag = -1;

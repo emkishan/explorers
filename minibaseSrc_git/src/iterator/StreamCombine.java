@@ -69,6 +69,7 @@ public class StreamCombine {
 	BTreeFile btf1 = null;
 	private boolean flag = false;
 	private float[] kMinimums = null;
+	private int tempCount =0;
 	public StreamCombine(int numTables, AttrType[][] in, int[] len_in,
 			short[][] s_sizes, int[] join_col_in, Iterator[] am,
 			int amt_of_mem, CondExpr[] outFilter, FldSpec[] proj_list,
@@ -394,7 +395,8 @@ public class StreamCombine {
 			return false;
 		}
 	}
-
+	
+*//*
 	private boolean tuplesMatch(Tuple t1, Tuple t2, AttrType[] tupleAttrs){
 		boolean flag=true;
 		try{
@@ -422,7 +424,8 @@ public class StreamCombine {
 			return flag;
 		}
 	}
-*/	private boolean isTopKCandidate(Tuple topKTuple,int relNum)
+	*/
+	private boolean isTopKCandidate(Tuple topKTuple,int relNum)
 	{
 		//System.out.println("In TopK candidate");
 		try {
@@ -460,7 +463,9 @@ public class StreamCombine {
 				e.printStackTrace();
 			}
 				Tuple newTuple = null;
+				
 				int count = kCounter;
+				System.out.println("in updateee");
 				while((newTuple = topIterator.get_next())!=null)
 				{	
 					count--;
@@ -468,7 +473,9 @@ public class StreamCombine {
 					int noOfRelationsChecked = newTuple.getIntFld(combinedAttrCount-2);
 					if(score<=TupleScore && noOfRelationsChecked==numTables)
 					{
+						
 						RID rid = ConstantVars.getGlobalRID();
+						RID insertRid = rid;
 						int RIDVal = rid.pageNo.pid*1000 + rid.slotNo;
 						kCounter=kCounter-1;
 						AttrType[] newAttrType = new AttrType[combinedAttrCount+1];
@@ -477,7 +484,9 @@ public class StreamCombine {
 						}
 						newAttrType[combinedAttrCount] = new AttrType(AttrType.attrInteger);
 						//System.out.println("Printing Top K candidates");
-						updateResultsFile(newTuple,rid);
+						newTuple.print(newAttrType);
+						tempFile.getRecord(insertRid);
+						updateResultsFile(newTuple,insertRid);
 						return true;
 					}
 					if(count <=0)
@@ -611,6 +620,8 @@ public class StreamCombine {
 		Tuple scanTuple = new Tuple();
 		try {
 			fileTuple = iterators[tableIndex].get_next();
+			fileTuple.print(combinedAttr);
+			System.out.println("Relation Num"+tempCount++);
 		} catch (JoinsException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -740,6 +751,25 @@ public class StreamCombine {
 		return count;
 	}
 
+	
+	public void insertIntoBTree(String strKey, RID rid, AttrType keyAttrType) {
+		try {
+			switch (keyAttrType.attrType) {
+			case AttrType.attrInteger:
+				btf1.insert(new IntegerKey(Integer.parseInt(strKey)),
+						rid);
+				break;
+			case AttrType.attrString:
+				System.out.println("key: "+strKey);
+				System.out.println("RId: "+rid);
+				btf1.insert(new StringKey(strKey), rid);
+				break;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
 	public void topKResults() {
 		int count = 0;
 		int k = 2*numTables;
@@ -748,6 +778,19 @@ public class StreamCombine {
 		Tuple scanTuple = new Tuple();
 		AttrType keyAttrType = new AttrType(
 				inputRelations[0][joinColumns[0]].attrType);
+		int keySize= 4;
+		if(inputRelations[0][joinColumns[0]].attrType==AttrType.attrString)
+			keySize=20;
+		try {
+			btf1 = new BTreeFile(
+					"BTreeIndex",
+					inputRelations[0][joinColumns[0]].attrType,
+					keySize, 1);
+			System.out.println("btreee  createddd");
+		}catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		while (count < knumTuples) {
 			if(k<=0)
 			{
@@ -759,73 +802,34 @@ public class StreamCombine {
 				for (int relNum = 0; relNum < numTables; relNum++) {
 
 					try {
+						printTempFile();
 						fileTuple = iterators[relNum].get_next();
 						System.out.println("File Tuple in Print Relations is"+relNum);
-						fileTuple.print(inputRelations[relNum]);
 						if (fileTuple == null)
 							continue;
+						fileTuple.print(inputRelations[relNum]);
+						
 						String strKey = "";
 						scanTuple.setHdr((short) combinedAttrCount, combinedAttr,
 								combinedStrSizes);
-						int keySize = 4;
 						try {
 							switch (inputRelations[relNum][joinColumns[relNum]].attrType) {
 							case AttrType.attrInteger:
 								strKey = String.valueOf(fileTuple
 										.getIntFld(joinColumns[relNum] + 1));
-								keySize = 4;
 								break;
 							case AttrType.attrString:
 								strKey = fileTuple
 								.getStrFld(joinColumns[relNum] + 1);
-								keySize = 20;
 								break;
 							}
-							btf1 = new BTreeFile(
-									"BTreeIndex",
-									inputRelations[relNum][joinColumns[relNum]].attrType,
-									keySize, 1);
+							
 							
 						} catch (Exception e) {
 							e.printStackTrace();
 							Runtime.getRuntime().exit(1);
 						}
-						Scan scan = null;
-						RID sScanRid = new RID();
-						String sTupleKey = "";
-						int tupleKey = 0;
-						Tuple temp1 = null;
-						try {
-							scan = new Scan(tempFile);
-							temp1 = scan.getNext(sScanRid);
-						} catch (Exception e) {
-							e.printStackTrace();
-						} 
-						while (temp1 != null) {
-							scanTuple.tupleCopy(temp1);
-							//System.out.println("In While Loop");
-							try {
-								switch (inputRelations[relNum][joinColumns[relNum]].attrType) {
-								case AttrType.attrInteger:
-									tupleKey = scanTuple
-									.getIntFld(combinedAttrCount);
-									btf1.insert(new IntegerKey(tupleKey), sScanRid);
-									break;
-								case AttrType.attrString:
-									sTupleKey = scanTuple
-									.getStrFld(combinedAttrCount);
-									//System.out.println("BTF Keys");
-									btf1.insert(new StringKey(sTupleKey), sScanRid);
-									
-									break;
-								}
-								temp1 = scan.getNext(sScanRid);
-								
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}	
-						scan.closescan();
+						
 						if(roundRobin ==1)
 						{
 							if(k>0)
@@ -839,7 +843,6 @@ public class StreamCombine {
 							count += sequentialAccess(fileTuple, keyAttrType,
 									strKey, relNum);
 						}
-						btf1.close();
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -959,8 +962,6 @@ public class StreamCombine {
 			RID ridnew = new RID();
 			ridnew.pageNo = new PageId(pageNo);
 			ridnew.slotNo = slotNo;
-			tempFile.deleteRecord(ridnew);
-			/*
 			AttrType keyAttrType = new AttrType(
 					inputRelations[0][joinColumns[0]].attrType);
 			switch(keyAttrType.attrType)
@@ -973,7 +974,7 @@ public class StreamCombine {
 					String strkey = fileTuple.getStrFld(combinedAttrCount);
 					btf1.Delete(new StringKey(strkey), ridnew);
 			}
-			*/
+			tempFile.deleteRecord(ridnew);
 			
 		} catch (InvalidSlotNumberException e) {
 			// TODO Auto-generated catch block
@@ -1216,6 +1217,7 @@ public class StreamCombine {
 		boolean keyExists = false;
 		try {
 			HashMap<String, Boolean> randomMap = new HashMap<String, Boolean>();
+			HashMap<String, Boolean> ridMap = new HashMap<String, Boolean>();
 			while ((t = tempScan.get_next()) != null) {
 				RID currRID = tempScan.getRID();
 				String scanKey = "" + currRID.pageNo.pid + "_" + currRID.slotNo;
@@ -1235,7 +1237,9 @@ public class StreamCombine {
 					updateTuple(fileTuple, combinedTuple, relNum,
 							getTupleOffset(relNum));
 					//combinedTuple.print(combinedAttr);
-					tempFile.insertRecord(combinedTuple.getTupleByteArray());
+					RID insertRid = tempFile.insertRecord(combinedTuple.getTupleByteArray());
+					insertIntoBTree(strKey, insertRid, keyAttrType);
+					randomMap.put(insertRid.pageNo.pid+"_"+insertRid.slotNo, true);
 					updateRemainingRelations(fileTuple, relNum);
 					/*System.out.println("Printing Results");
 					System.out.println("-----------------------------------------------");
@@ -1281,7 +1285,8 @@ public class StreamCombine {
 					combinedTuple.setStrFld(combinedAttrCount, strKey);
 					}
 				//combinedTuple.print(combinedAttr);
-				tempFile.insertRecord(combinedTuple.getTupleByteArray());
+				RID rid=tempFile.insertRecord(combinedTuple.getTupleByteArray());
+				insertIntoBTree(strKey, rid, keyAttrType);
 				updateRemainingRelations(fileTuple, relNum);
 				/*System.out.println("Printing Results");
 				System.out.println("-----------------------------------------------");
@@ -1532,7 +1537,7 @@ public class StreamCombine {
 			while ((tempTuple = topIterator.get_next()) != null) {
 				if(count <= 1)
 					break;
-				int fieldLength = tempTuple.getIntFld(combinedAttrCount-1);
+				int fieldLength = tempTuple.getIntFld(combinedAttrCount-2);
 				if(fieldLength == numTables)
 					continue;
 				count--;
