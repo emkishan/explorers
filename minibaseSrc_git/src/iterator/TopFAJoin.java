@@ -676,11 +676,11 @@ public class TopFAJoin extends Iterator {
 				} else if (keyAttrType.attrType == AttrType.attrString) {
 					combinedTuple.setStrFld(combinedAttrCount, strKey);
 				}
-				if (!updateFlag) {
+			//	if (!updateFlag) {
 					insertRid = tempFile.insertRecord(combinedTuple
 							.getTupleByteArray());
 					insertIntoBTree(strKey, insertRid, keyAttrType);
-				}
+			//	}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
