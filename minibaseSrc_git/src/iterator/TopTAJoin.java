@@ -723,6 +723,8 @@ public class TopTAJoin {
 			//tupleCopy.print(combinedAttrTypes);
 			//tupleCopy = new Tuple();
 			tempTuple.setHdr((short)combinedAttrTypes.length,combinedAttrTypes,superStrSizes);
+			//System.out.println("Inserting ");
+			//tempTuple.print(combinedAttrTypes);
 			}
 			if(tupleFlag==1){
 				tupleCopy.setHdr((short)superAttrTypes.length,superAttrTypes,superStrSizes);
@@ -1145,8 +1147,8 @@ public class TopTAJoin {
 	private String getKey(Tuple tup,AttrType keyType){
 		String key;
 		try{
-			System.out.println("Tuple is ");
-			tup.print(combinedAttrTypes);
+			//System.out.println("Tuple is ");
+			//tup.print(combinedAttrTypes);
 			for(int i=0;i<numberOfTables;i++){
 				switch(keyType.attrType){
 				case AttrType.attrInteger:
@@ -1202,7 +1204,7 @@ public class TopTAJoin {
 			fileTuple.setHdr((short)inputRelations[relNum].length, inputRelations[relNum], stringSizes[relNum]);
 			fileTuple.print(inputRelations[relNum]);
 			int recCnt = interTAtuples.getRecCnt();
-			System.out.println("Current record count: " + recCnt);
+			//System.out.println("Current record count: " + recCnt);
 			for(int loop=0;loop<recCnt;loop++){
 				
 				tup.setHdr((short)superAttrTypes.length, superAttrTypes, superStrSizes);
@@ -1218,8 +1220,7 @@ public class TopTAJoin {
 						updateTuple(fileTuple,tup,relNum,tupleOffsets[relNum]+1);
 						float tupScore = fileTuple.getFloFld(inputRelations[relNum].length);
 						tupScore += tup.getFloFld(superAttrTypes.length)*(numberOfTables-1);
-						//System.out.println("Tuple in first if");
-						//tup.print(superAttrTypes);
+						tup.setFloFld(superAttrTypes.length, tupScore/numberOfTables);
 						Tuple supTup = new Tuple();
 						supTup.setHdr((short)combinedAttrTypes.length, combinedAttrTypes, superStrSizes);
 						for(int i=0;i<superAttrTypes.length-1;i++){
@@ -1237,6 +1238,7 @@ public class TopTAJoin {
 						}
 						supTup.setIntFld(combinedAttrTypes.length-1, numberOfTables);
 						supTup.setFloFld(combinedAttrTypes.length, tup.getFloFld(superAttrTypes.length));
+						//supTup.print(combinedAttrTypes);
 						if((tupScore/numberOfTables)>min){
 							//System.out.println("Tuple being inserted");
 							//supTup.print(combinedAttrTypes);
@@ -1252,9 +1254,14 @@ public class TopTAJoin {
 						//System.out.println("Tuple before update");
 						//newTup.print(superAttrTypes);
 						updateTuple(fileTuple,newTup,relNum,tupleOffsets[relNum]+1);
-						float tupScore = fileTuple.getFloFld(inputRelations[relNum].length);
+						/*float tupScore = fileTuple.getFloFld(inputRelations[relNum].length);
 						tupScore -= newTup.getFloFld(tupleOffsets[relNum+1]-1);
 						tupScore += newTup.getFloFld(superAttrTypes.length)*(numberOfTables);
+						tupScore/=numberOfTables;*/
+						newTup.setIntFld(superAttrTypes.length,newTup.getIntFld(superAttrTypes.length)+1);
+						float tupScore = newTup.getFloFld(superAttrTypes.length)*(numberOfTables);
+						tupScore-= newTup.getFloFld(tupleOffsets[relNum+1]-1);
+						tupScore += fileTuple.getFloFld(inputRelations[relNum].length);
 						tupScore/=numberOfTables;
 						//System.out.println("Tuple in else");
 						//tup.print(superAttrTypes);
@@ -1274,8 +1281,9 @@ public class TopTAJoin {
 							}
 						}
 						supTup.setIntFld(combinedAttrTypes.length-1, numberOfTables);
-						supTup.setFloFld(combinedAttrTypes.length, newTup.getFloFld(superAttrTypes.length));
-						if(tupScore>min){
+						supTup.setFloFld(combinedAttrTypes.length, tupScore);
+						//supTup.print(combinedAttrTypes);
+						if(tupScore>min && fullTuple(supTup, combinedAttrTypes, joinColumns)){
 							//System.out.println("Tuple being inserted");
 							//supTup.print(combinedAttrTypes);
 							interTAtuples.insertRecord(tup.getTupleByteArray());
@@ -1295,7 +1303,9 @@ public class TopTAJoin {
 				newTup.setFloFld(superAttrTypes.length, fileTuple.getFloFld(inputRelations[relNum].length));
 				//System.out.println("Tuple in keyExists");
 				//newTup.print(superAttrTypes);
+				newTup.setIntFld(superAttrTypes.length-1, 1);
 				RID insRID = interTAtuples.insertRecord(newTup.getTupleByteArray());
+				
 				//System.out.println("inserted stuff");
 				//Tuple t = interTAtuples.getRecord(insRID);
 				//t.setHdr((short)superAttrTypes.length, superAttrTypes, superStrSizes);
@@ -1881,7 +1891,7 @@ public class TopTAJoin {
 			}
 			if(count==kResultsFile.getRecCnt() && fullTuple(kTuple, combinedAttrTypes, joinColumns)){
 				//System.out.println("inserting record : ");
-				kTuple.print(combinedAttrTypes);
+				//kTuple.print(combinedAttrTypes);
 				kResultsFile.insertRecord(kTuple.getTupleByteArray());
 			}
 		}
@@ -1996,13 +2006,13 @@ public class TopTAJoin {
 				
 				
 				//delTuple.setIntFld(superAttrTypes.length-1, delTuple.getIntFld(superAttrTypes.length-1)-1);
-				delTuple.setFloFld(superAttrTypes.length, delTuple.getFloFld(superAttrTypes.length)*numberOfTables-delScore);
+				//delTuple.setFloFld(superAttrTypes.length, delTuple.getFloFld(superAttrTypes.length)*numberOfTables-delScore);
 				if(emptyTuple(delTuple,superAttrTypes,joinColumns)){
 					interTAtuples.deleteRecord(tempRID);
 					interBTF[relation].Delete(new IntegerKey(intKey), tempRID);
 				}
 				else{
-					delTuple.setIntFld(superAttrTypes.length-2, delTuple.getIntFld(superAttrTypes.length-2)-1);
+					//delTuple.setIntFld(superAttrTypes.length-1, delTuple.getIntFld(superAttrTypes.length-1)-1);
 					interTAtuples.updateRecord(tempRID, delTuple);
 				//System.out.println("Updated record");
 				//Tuple dummy = interTAtuples.getRecord(tempRID);
